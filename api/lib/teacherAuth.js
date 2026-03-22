@@ -30,9 +30,8 @@ export async function isTeacherSession(redis, token) {
 function queryKeyFromRequest(req) {
   if (req.query && req.query.key != null) return String(req.query.key);
   try {
-    const raw = String(req.url || "").split("?")[1];
-    if (!raw) return "";
-    return new URLSearchParams(raw).get("key") || "";
+    const u = new URL(String(req.url || ""), "http://localhost");
+    return u.searchParams.get("key") || "";
   } catch {
     return "";
   }

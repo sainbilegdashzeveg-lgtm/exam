@@ -4,6 +4,9 @@
   "installCommand": "npm install",
   "buildCommand": "npm run build",
   "outputDirectory": "build",
+  "env": {
+    "NODE_OPTIONS": "--disable-warning=DEP0169"
+  },
   "functions": {
     "api/**/*.js": {
       "maxDuration": 10
