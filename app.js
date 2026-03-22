@@ -111,6 +111,16 @@ let quiz = [];
 let selected = [];
 let currentPage = 0;
 let quizId = "";
+let revealedReview = false;
+
+function deriveRevealedReview(data) {
+  if (data.revealedReview === true) return true;
+  if (data.revealedReview === false) return false;
+  if (data.finished && !Object.prototype.hasOwnProperty.call(data, "revealedReview")) {
+    return true;
+  }
+  return false;
+}
 
 function normalizeHeader(h) {
   return String(h || "")
@@ -312,6 +322,7 @@ function saveSession(partial) {
       currentPage,
       resumeToResults: false,
       finished: false,
+      revealedReview,
     };
     localStorage.setItem(getStorageKey(), JSON.stringify({ ...base, ...partial }));
   } catch (_) {
@@ -422,27 +433,55 @@ function fillResultsUI() {
       ? "Бүх асуулт зөв."
       : `${correct} зөв (нийт ${total}).`;
 
+  const heading = document.getElementById("review-heading");
+  const flowHint = document.getElementById("results-flow-hint");
+
   els.review.innerHTML = "";
-  quiz.forEach((q, i) => {
-    const user = selected[i];
-    const ok = user === q.correctIndex;
-    const your =
-      user == null ? "Хариулсангүй" : `${KEYS[user]} — ${q.choices[user]}`;
-    const right = `${KEYS[q.correctIndex]} — ${q.choices[q.correctIndex]}`;
-    const div = document.createElement("div");
-    div.className = "review-item";
-    div.innerHTML = `
+  if (revealedReview) {
+    if (heading) heading.textContent = "Асуулт бүрийн шалгалт";
+    if (flowHint) {
+      flowHint.innerHTML =
+        "Доорх жагсаалтаас асуулт бүрийн зөв, буруу хариултаа харна уу.";
+    }
+    if (els.btnScrollReview) els.btnScrollReview.classList.remove("hidden");
+
+    quiz.forEach((q, i) => {
+      const user = selected[i];
+      const ok = user === q.correctIndex;
+      const your =
+        user == null ? "Хариулсангүй" : `${KEYS[user]} — ${q.choices[user]}`;
+      const right = `${KEYS[q.correctIndex]} — ${q.choices[q.correctIndex]}`;
+      const div = document.createElement("div");
+      div.className = "review-item";
+      div.innerHTML = `
       <div class="review-q">${escapeHtml(q.question)}</div>
       <div class="review-meta ${ok ? "correct" : "incorrect"}">
         ${ok ? "Зөв." : `Таны хариулт: ${escapeHtml(your)}`}
       </div>
       ${ok ? "" : `<div class="review-meta correct">Зөв хариулт: ${escapeHtml(right)}</div>`}
     `;
-    els.review.appendChild(div);
-  });
+      els.review.appendChild(div);
+    });
+  } else {
+    if (heading) heading.textContent = "Асуулт бүрийн дүн";
+    if (flowHint) {
+      flowHint.innerHTML =
+        "<strong>Алхам 1.</strong> Доор овог нэрээ бичиж багшид илгээнэ. <strong>Алхам 2.</strong> Илгээсний дараа асуулт бүрийн зөв, буруу хариулт доор гарна.";
+    }
+    if (els.btnScrollReview) els.btnScrollReview.classList.add("hidden");
+
+    const p = document.createElement("p");
+    p.className = "review-locked";
+    p.textContent =
+      "Энд асуулт бүрийн зөв, буруу хариулт багшид амжилттай илгээсний дараа л харагдана.";
+    els.review.appendChild(p);
+  }
 }
 
-function showResults() {
+function showResults(options = {}) {
+  if (!options.preserveRevealed) {
+    revealedReview = false;
+  }
   fillResultsUI();
   syncQuizId();
   if (els.submitStatus) els.submitStatus.textContent = "";
@@ -451,6 +490,7 @@ function showResults() {
   saveSession({
     resumeToResults: false,
     finished: true,
+    revealedReview,
   });
 }
 
@@ -485,6 +525,7 @@ function applyStoredSession(data) {
   selected = normalizeSelected(data.selected, quiz.length);
   currentPage = data.currentPage | 0;
   clampCurrentPage();
+  revealedReview = deriveRevealedReview(data);
   syncQuizId();
 }
 
@@ -502,7 +543,7 @@ function initFromStorage() {
   }
 
   if (data.resumeToResults) {
-    showResults();
+    showResults({ preserveRevealed: true });
     hideSessionChrome();
     return true;
   }
@@ -543,7 +584,7 @@ els.btnContinue.addEventListener("click", () => {
   hideSessionChrome();
 
   if (data.resumeToResults) {
-    showResults();
+    showResults({ preserveRevealed: true });
     return;
   }
 
@@ -620,8 +661,11 @@ if (els.btnSubmitTeacher) {
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.error || `Алдаа ${res.status}`);
+      revealedReview = true;
+      saveSession({ finished: true, revealedReview: true });
+      fillResultsUI();
       els.submitStatus.textContent =
-        "Амжилттай илгээгдлээ. Дээрх «Асуулт бүрийн шалгалт»-аас зөв, буруу хариултаа дахин харж болно. Багш teacher.html → «Ачаалах».";
+        "Амжилттай илгээгдлээ. Доор асуулт бүрийн зөв, буруу харагдана. Багш teacher.html → «Ачаалах».";
       if (els.reviewSection) {
         requestAnimationFrame(() => {
           els.reviewSection.scrollIntoView({ behavior: "smooth", block: "start" });

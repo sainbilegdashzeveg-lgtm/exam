@@ -1,4 +1,23 @@
-export function parseJsonBody(req) {
+export async function parseJsonBody(req) {
+  const any = req.body;
+  if (any != null && typeof any === "object" && !Buffer.isBuffer(any)) {
+    return any;
+  }
+  if (Buffer.isBuffer(any)) {
+    try {
+      return JSON.parse(any.toString("utf8") || "{}");
+    } catch {
+      return {};
+    }
+  }
+  if (typeof any === "string") {
+    try {
+      return JSON.parse(any || "{}");
+    } catch {
+      return {};
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const chunks = [];
     req.on("data", (c) => chunks.push(c));

@@ -68,15 +68,10 @@
         <h2>Дүн</h2>
         <div class="score-ring" id="score-value"></div>
         <p class="score-detail" id="score-detail"></p>
-        <p class="results-flow-hint">
-          <strong>Алхам 1.</strong> Доорх жагсаалтаар асуулт бүрийн зөв, буруу хариултаа шалгана.
-          <strong>Алхам 2.</strong> Дараа нь багшид илгээнэ. Илгээсний дараа ч гэсэн энэ жагсаалтыг дахин харж болно.
+        <p class="results-flow-hint" id="results-flow-hint">
+          <strong>Алхам 1.</strong> Доор овог нэрээ бичиж багшид илгээнэ.
+          <strong>Алхам 2.</strong> Илгээсний дараа асуулт бүрийн зөв, буруу хариулт доор гарна.
         </p>
-
-        <section id="review-section" class="review-section" aria-labelledby="review-heading">
-          <h3 id="review-heading" class="review-section__title">Асуулт бүрийн шалгалт</h3>
-          <div id="review"></div>
-        </section>
 
         <div class="submit-panel" id="submit-panel">
           <h3 class="submit-panel__title">Багшид илгээх</h3>
@@ -101,10 +96,15 @@
           <p id="quiz-id-hint" class="upload-hint submit-panel__hint"></p>
           <button type="button" class="btn btn-primary" id="btn-submit-teacher">Илгээх</button>
           <p id="submit-status" class="upload-hint" role="status"></p>
-          <button type="button" class="btn btn-ghost btn--compact" id="btn-scroll-review">
-            Дүнгийн жагсаалт руу буцах
+          <button type="button" class="btn btn-ghost btn--compact hidden" id="btn-scroll-review">
+            Асуулт бүрийн дүн рүү буцах
           </button>
         </div>
+
+        <section id="review-section" class="review-section" aria-labelledby="review-heading">
+          <h3 id="review-heading" class="review-section__title">Асуулт бүрийн шалгалт</h3>
+          <div id="review"></div>
+        </section>
 
         <div class="results-footer-actions">
           <p class="results-footer-actions__hint">
