@@ -2,6 +2,9 @@
   "name": "csv-quiz",
   "private": true,
   "type": "module",
+  "scripts": {
+    "build": "echo 'No build step (static + serverless API)'"
+  },
   "dependencies": {
     "@upstash/redis": "^1.34.3"
   }
