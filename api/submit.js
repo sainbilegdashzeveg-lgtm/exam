@@ -1,4 +1,4 @@
-import { getRedis, SUBMISSIONS_KEY } from "./lib/redis.js";
+import { connectRedis, SUBMISSIONS_KEY } from "./lib/redis.js";
 import { parseJsonBody } from "./lib/parseJsonBody.js";
 
 export default async function handler(req, res) {
@@ -15,16 +15,12 @@ export default async function handler(req, res) {
       return res.end(JSON.stringify({ error: "Method not allowed" }));
     }
 
-    const redis = getRedis();
-    if (!redis) {
+    const conn = connectRedis();
+    if (!conn.ok) {
       res.statusCode = 503;
-      return res.end(
-        JSON.stringify({
-          error:
-            "Redis тохируулаагүй байна. Upstash Redis үүсгээд Vercel дээр UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN оруулна.",
-        })
-      );
+      return res.end(JSON.stringify({ error: conn.error }));
     }
+    const redis = conn.redis;
 
     let b;
     try {

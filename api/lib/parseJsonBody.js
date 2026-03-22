@@ -18,6 +18,11 @@ export async function parseJsonBody(req) {
     }
   }
 
+  if (typeof req.on !== "function") {
+    console.warn("parseJsonBody: req.on missing, cannot read stream");
+    return {};
+  }
+
   return new Promise((resolve, reject) => {
     const chunks = [];
     req.on("data", (c) => chunks.push(c));

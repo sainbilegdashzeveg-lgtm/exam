@@ -1,4 +1,4 @@
-import { getRedis, SUBMISSIONS_KEY } from "./lib/redis.js";
+import { connectRedis, SUBMISSIONS_KEY } from "./lib/redis.js";
 
 function teacherKey() {
   return process.env.TEACHER_KEY || "teacher-demo-key";
@@ -38,16 +38,12 @@ export default async function handler(req, res) {
       return res.end(JSON.stringify({ error: "Unauthorized" }));
     }
 
-    const redis = getRedis();
-    if (!redis) {
+    const conn = connectRedis();
+    if (!conn.ok) {
       res.statusCode = 503;
-      return res.end(
-        JSON.stringify({
-          error:
-            "Redis тохируулаагүй байна. Vercel дээр Upstash хувьсагчуудыг оруулна.",
-        })
-      );
+      return res.end(JSON.stringify({ error: conn.error }));
     }
+    const redis = conn.redis;
 
     let raw;
     try {
