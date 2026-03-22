@@ -11,6 +11,7 @@ const files = [
   "app.js",
   "styles.css",
   "teacher.html",
+  "teacher-portal.html",
   "manage-quizzes.html",
   "sample-quiz.csv",
   "quiz.csv",

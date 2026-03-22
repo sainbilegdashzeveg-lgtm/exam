@@ -1,5 +1,10 @@
 import { connectRedis, SUBMISSIONS_KEY } from "./lib/redis.js";
 import { parseJsonBody } from "./lib/parseJsonBody.js";
+import {
+  dynamicQuizStorageKey,
+  parseDynamicQuiz,
+  canSubmitDynamicQuiz,
+} from "./lib/dynamicQuiz.js";
 
 export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -37,6 +42,24 @@ export default async function handler(req, res) {
     if (!b.quizId || typeof b.score !== "number" || typeof b.total !== "number") {
       res.statusCode = 400;
       return res.end(JSON.stringify({ error: "invalid payload" }));
+    }
+
+    const qidStr = String(b.quizId);
+    if (qidStr.startsWith("t_")) {
+      const rawDyn = await redis.get(dynamicQuizStorageKey(qidStr));
+      const dq = parseDynamicQuiz(rawDyn);
+      const sub = canSubmitDynamicQuiz(dq, Date.now());
+      if (!sub.ok) {
+        res.statusCode = 403;
+        return res.end(
+          JSON.stringify({
+            error:
+              sub.reason === "finished"
+                ? "Энэ шалгалт багшаар дуусгагдсан — илгээх боломжгүй."
+                : "Шалгалтын хугацаа идэвхгүй байна — илгээх боломжгүй.",
+          })
+        );
+      }
     }
 
     const row = {

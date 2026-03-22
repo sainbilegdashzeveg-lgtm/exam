@@ -1,22 +1,5 @@
 import { connectRedis, SUBMISSIONS_KEY } from "./lib/redis.js";
-
-function teacherKey() {
-  return process.env.TEACHER_KEY || "teacher-demo-key";
-}
-
-function getTeacherKeyFromRequest(req) {
-  const q = req.query;
-  if (q && q.key) return String(q.key);
-  const h = req.headers["x-teacher-key"];
-  if (h) return String(h);
-  try {
-    const raw = String(req.url || "").split("?")[1];
-    if (!raw) return "";
-    return new URLSearchParams(raw).get("key") || "";
-  } catch {
-    return "";
-  }
-}
+import { authorizeTeacherRequest } from "./lib/teacherAuth.js";
 
 export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -32,18 +15,18 @@ export default async function handler(req, res) {
       return res.end(JSON.stringify({ error: "Method not allowed" }));
     }
 
-    const key = getTeacherKeyFromRequest(req);
-    if (key !== teacherKey()) {
-      res.statusCode = 401;
-      return res.end(JSON.stringify({ error: "Unauthorized" }));
-    }
-
     const conn = connectRedis();
     if (!conn.ok) {
       res.statusCode = 503;
       return res.end(JSON.stringify({ error: conn.error }));
     }
     const redis = conn.redis;
+
+    const ok = await authorizeTeacherRequest(req, redis);
+    if (!ok) {
+      res.statusCode = 401;
+      return res.end(JSON.stringify({ error: "Unauthorized" }));
+    }
 
     let raw;
     try {

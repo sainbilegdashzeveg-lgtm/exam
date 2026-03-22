@@ -283,6 +283,13 @@ async function tryLoadBundledQuizCsv() {
     pid = "";
   }
   if (pid) {
+    if (pid.startsWith("t_")) {
+      const t = await fetchCsvText(
+        `/api/quiz-csv?id=${encodeURIComponent(pid)}`
+      );
+      if (!t) return false;
+      return parseCsvTextApply(t);
+    }
     const t = await fetchCsvText(`/quizzes/${pid}.csv`);
     if (!t) return false;
     return parseCsvTextApply(t);
@@ -426,6 +433,42 @@ async function checkQuizWindow(quizSlot) {
     detail = `Шалгалтын хугацаа дууссан (${formatTs(ev.openT)} – ${formatTs(ev.closeT)}).`;
   }
   return { ok: false, message: custom, detail };
+}
+
+/** Багшийн порталаас үүсгэсэн шалгалт (Redis) — /api/quiz-status */
+async function checkDynamicQuizWindow(pid) {
+  try {
+    const res = await fetch(`/api/quiz-status?id=${encodeURIComponent(pid)}`, {
+      cache: "no-store",
+    });
+    const j = await res.json().catch(() => ({}));
+    if (res.status === 503) {
+      return {
+        ok: false,
+        message: j.error || "Серверийн тохиргоо (Redis) шалгана уу.",
+        detail: "",
+      };
+    }
+    if (res.status === 404) {
+      return {
+        ok: false,
+        message: "Энэ шалгалт олдсонгүй эсвэл устсан байна.",
+        detail: "",
+      };
+    }
+    if (j.ok === true) return { ok: true };
+    return {
+      ok: false,
+      message: j.message || "Шалгалтын цонх хаалттай.",
+      detail: j.detail || "",
+    };
+  } catch {
+    return {
+      ok: false,
+      message: "Сүлжээний алдаа — шалгалтын төлөв ачаалагдсангүй.",
+      detail: "",
+    };
+  }
 }
 
 function renderPage() {
@@ -761,7 +804,10 @@ async function bootstrap() {
     pid = "";
   }
   const slot = pid || "default";
-  const win = await checkQuizWindow(slot);
+  const win =
+    pid && pid.startsWith("t_")
+      ? await checkDynamicQuizWindow(pid)
+      : await checkQuizWindow(slot);
   if (!win.ok) {
     if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
     const cm = document.getElementById("closed-message");
@@ -775,7 +821,9 @@ async function bootstrap() {
   if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
   if (!ok) {
     if (pid) {
-      els.uploadError.textContent = `«${pid}» шалгалт олдсонгүй. Файл quizzes/${pid}.csv байгаа эсэхийг шалгана уу.`;
+      els.uploadError.textContent = pid.startsWith("t_")
+        ? `«${pid}» динамик шалгалт ачаалагдсангүй (цонх хаалттай эсвэл серверийн тохиргоо). Багшийн портал шалгана уу.`
+        : `«${pid}» шалгалт олдсонгүй. Файл quizzes/${pid}.csv байгаа эсэхийг шалгана уу.`;
     }
     showScreen("upload");
   }
