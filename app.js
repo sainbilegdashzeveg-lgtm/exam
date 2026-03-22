@@ -79,6 +79,7 @@ function updateSessionUrlHint() {
 }
 
 const els = {
+  screenClosed: document.getElementById("screen-closed"),
   screenUpload: document.getElementById("screen-upload"),
   screenQuiz: document.getElementById("screen-quiz"),
   screenResults: document.getElementById("screen-results"),
@@ -356,9 +357,75 @@ function clampCurrentPage() {
 }
 
 function showScreen(name) {
+  if (els.screenClosed) {
+    els.screenClosed.classList.toggle("hidden", name !== "closed");
+  }
   els.screenUpload.classList.toggle("hidden", name !== "upload");
   els.screenQuiz.classList.toggle("hidden", name !== "quiz");
   els.screenResults.classList.toggle("hidden", name !== "results");
+}
+
+async function fetchQuizManifest() {
+  try {
+    const r = await fetch("/quizzes/manifest.json", { cache: "no-store" });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+function resolveWindowConfig(manifest, quizSlot) {
+  if (!manifest || typeof manifest !== "object") return null;
+  if (quizSlot && quizSlot !== "default") {
+    const list = Array.isArray(manifest.quizzes) ? manifest.quizzes : [];
+    const q = list.find((x) => x && x.id === quizSlot);
+    if (q && q.window && typeof q.window === "object") return q.window;
+  }
+  if (manifest.defaultWindow && typeof manifest.defaultWindow === "object") {
+    return manifest.defaultWindow;
+  }
+  return null;
+}
+
+function evaluateWindow(w) {
+  if (!w || !w.enabled) return { ok: true };
+  const openT = Date.parse(w.openAt);
+  const closeT = Date.parse(w.closeAt);
+  if (Number.isNaN(openT) || Number.isNaN(closeT)) return { ok: true };
+  const now = Date.now();
+  if (now < openT) return { ok: false, reason: "before", openT, closeT };
+  if (now > closeT) return { ok: false, reason: "after", openT, closeT };
+  return { ok: true, openT, closeT };
+}
+
+function formatTs(ts) {
+  try {
+    return new Date(ts).toLocaleString("mn-MN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return String(ts);
+  }
+}
+
+async function checkQuizWindow(quizSlot) {
+  const manifest = await fetchQuizManifest();
+  const w = resolveWindowConfig(manifest, quizSlot);
+  const ev = evaluateWindow(w);
+  if (ev.ok) return { ok: true };
+  const custom =
+    w && typeof w.message === "string" && w.message.trim()
+      ? w.message.trim()
+      : "Энэ шалгалт одоогоор нээлттэй биш — зөвшөөрөгдсөн шалгалтын хугацаанд л орно.";
+  let detail = "";
+  if (ev.reason === "before" && ev.openT != null && ev.closeT != null) {
+    detail = `Шалгалтын хугацаа: ${formatTs(ev.openT)} – ${formatTs(ev.closeT)}. Одоо урьдчилан нээгдээгүй — дээрх эхний цагаас хойш орно.`;
+  } else if (ev.reason === "after" && ev.closeT != null && ev.openT != null) {
+    detail = `Шалгалтын хугацаа дууссан (${formatTs(ev.openT)} – ${formatTs(ev.closeT)}).`;
+  }
+  return { ok: false, message: custom, detail };
 }
 
 function renderPage() {
@@ -692,6 +759,17 @@ async function bootstrap() {
     pid = sanitizeQuizId(new URLSearchParams(window.location.search).get("quiz"));
   } catch {
     pid = "";
+  }
+  const slot = pid || "default";
+  const win = await checkQuizWindow(slot);
+  if (!win.ok) {
+    if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
+    const cm = document.getElementById("closed-message");
+    const cd = document.getElementById("closed-window-detail");
+    if (cm) cm.textContent = win.message || "";
+    if (cd) cd.textContent = win.detail || "";
+    showScreen("closed");
+    return;
   }
   const ok = await tryLoadBundledQuizCsv();
   if (bootLoadingEl) bootLoadingEl.classList.add("hidden");

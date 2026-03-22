@@ -69,6 +69,7 @@
           <thead>
             <tr>
               <th>Нэр</th>
+              <th>Шалгалтын хугацаа</th>
               <th>Оюутанд өгөх линк</th>
               <th></th>
             </tr>
@@ -85,6 +86,12 @@
           </ol>
           <p style="margin: 0.75rem 0 0">
             <strong>Үндсэн шалгалт</strong> (<code>quiz.csv</code>): линк дээр <code>?quiz=</code> байхгүй бол энэ ачаалагдана.
+          </p>
+          <p style="margin: 0.75rem 0 0">
+            <strong>Шалгалтын хугацаа:</strong> <code>manifest.json</code> дотор <code>defaultWindow</code> (үндсэн) эсвэл шалгалт бүрийн
+            <code>window</code> — <code>enabled: true</code>, дараа нь шалгалт <strong>нээлттэй байх завсар</strong>:
+            <code>openAt</code>, <code>closeAt</code> (огноо+цаг, жишээ нь <code>+08:00</code> бүсээр),
+            <code>message</code> оюутанд гаргах товч тайлбар (сонголттой).
           </p>
         </div>
       </div>
@@ -116,50 +123,29 @@
         return u.toString();
       }
 
-      async function load() {
-        const status = document.getElementById("mq-status");
-        const err = document.getElementById("mq-error");
-        const table = document.getElementById("mq-table");
-        const tbody = document.getElementById("mq-tbody");
-        err.classList.add("hidden");
-        err.textContent = "";
-
-        const defaultUrl = studentUrl("");
-        tbody.innerHTML = "";
-
-        const rowDefault = document.createElement("tr");
-        rowDefault.innerHTML = `
-          <td><strong>Үндсэн</strong> (quiz.csv)</td>
-          <td class="mq-link">${esc(defaultUrl)}</td>
-          <td><button type="button" class="btn btn-primary btn-sm-mq" data-copy="${esc(defaultUrl)}">Хуулах</button></td>
-        `;
-        tbody.appendChild(rowDefault);
-
+      function fmtTs(ts) {
         try {
-          const res = await fetch("/quizzes/manifest.json", { cache: "no-store" });
-          if (!res.ok) throw new Error("manifest олдсонгүй");
-          const data = await res.json();
-          const list = Array.isArray(data.quizzes) ? data.quizzes : [];
-          for (const q of list) {
-            if (!q || !q.id) continue;
-            const url = studentUrl(q.id);
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-              <td>${esc(q.title || q.id)}<br/><span class="upload-hint">id: ${esc(q.id)}</span></td>
-              <td class="mq-link">${esc(url)}</td>
-              <td><button type="button" class="btn btn-primary btn-sm-mq" data-copy="${esc(url)}">Хуулах</button></td>
-            `;
-            tbody.appendChild(tr);
-          }
-        } catch (e) {
-          err.textContent =
-            "manifest.json ачаалж чадсангүй — зөвхөн үндсэн линк харагдаж байна. quizzes/manifest.json шалгана уу.";
-          err.classList.remove("hidden");
+          return new Date(ts).toLocaleString("mn-MN", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          });
+        } catch {
+          return "";
         }
+      }
 
-        status.classList.add("hidden");
-        table.classList.remove("hidden");
+      function describeWindow(w) {
+        if (!w || !w.enabled) return "Шалгалтын хугацаа: хязгаарлалтгүй";
+        const o = Date.parse(w.openAt);
+        const c = Date.parse(w.closeAt);
+        if (Number.isNaN(o) || Number.isNaN(c)) return "Шалгалтын хугацаа: тохиргоо буруу";
+        const now = Date.now();
+        if (now < o) return "Одоо хаалттай — " + fmtTs(o) + "-аас эхлэх хугацаанд нээгдэнэ";
+        if (now > c) return "Шалгалтын хугацаа дууссан (" + fmtTs(c) + ")";
+        return "Одоо нээлттэй — " + fmtTs(o) + " – " + fmtTs(c);
+      }
 
+      function wireCopyButtons(tbody) {
         tbody.querySelectorAll("button[data-copy]").forEach((btn) => {
           btn.addEventListener("click", () => {
             const t = btn.getAttribute("data-copy");
@@ -174,6 +160,66 @@
             );
           });
         });
+      }
+
+      async function load() {
+        const status = document.getElementById("mq-status");
+        const err = document.getElementById("mq-error");
+        const table = document.getElementById("mq-table");
+        const tbody = document.getElementById("mq-tbody");
+        err.classList.add("hidden");
+        err.textContent = "";
+
+        const defaultUrl = studentUrl("");
+        tbody.innerHTML = "";
+
+        let manifestData = null;
+        try {
+          const res = await fetch("/quizzes/manifest.json", { cache: "no-store" });
+          if (res.ok) manifestData = await res.json();
+        } catch {
+          /* ignore */
+        }
+
+        const defaultWin = manifestData && manifestData.defaultWindow ? manifestData.defaultWindow : null;
+
+        const rowDefault = document.createElement("tr");
+        rowDefault.innerHTML = `
+          <td><strong>Үндсэн</strong> (quiz.csv)</td>
+          <td class="upload-hint">${esc(describeWindow(defaultWin))}</td>
+          <td class="mq-link">${esc(defaultUrl)}</td>
+          <td><button type="button" class="btn btn-primary btn-sm-mq" data-copy="${esc(defaultUrl)}">Хуулах</button></td>
+        `;
+        tbody.appendChild(rowDefault);
+
+        try {
+          if (!manifestData) throw new Error("manifest олдсонгүй");
+          const data = manifestData;
+          const list = Array.isArray(data.quizzes) ? data.quizzes : [];
+          const defW = data.defaultWindow || null;
+          for (const q of list) {
+            if (!q || !q.id) continue;
+            const url = studentUrl(q.id);
+            const w = q.window && typeof q.window === "object" ? q.window : defW;
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${esc(q.title || q.id)}<br/><span class="upload-hint">id: ${esc(q.id)}</span></td>
+              <td class="upload-hint">${esc(describeWindow(w))}</td>
+              <td class="mq-link">${esc(url)}</td>
+              <td><button type="button" class="btn btn-primary btn-sm-mq" data-copy="${esc(url)}">Хуулах</button></td>
+            `;
+            tbody.appendChild(tr);
+          }
+        } catch (e) {
+          err.textContent =
+            "manifest.json ачаалж чадсангүй — зөвхөн үндсэн линк харагдаж байна. quizzes/manifest.json шалгана уу.";
+          err.classList.remove("hidden");
+        }
+
+        status.classList.add("hidden");
+        table.classList.remove("hidden");
+
+        wireCopyButtons(tbody);
       }
 
       load();

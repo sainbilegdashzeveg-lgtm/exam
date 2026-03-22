@@ -20,6 +20,18 @@
         <a href="manage-quizzes.html">manage-quizzes.html</a>
       </p>
 
+      <div id="screen-closed" class="card hidden">
+        <h2>Шалгалтын хугацаанаас гадуур</h2>
+        <p id="closed-message" class="closed-message"></p>
+        <p id="closed-window-detail" class="upload-hint"></p>
+        <p class="upload-hint">
+          <strong>Шалгалтын хугацааг</strong> багш <code>quizzes/manifest.json</code> дотор тохируулна:
+          үндсэн шалгалтад <code>defaultWindow</code>, тусдаа шалгалтад тухайн мөрийн <code>window</code>.
+          <code>openAt</code> / <code>closeAt</code> нь шалгалт <strong>нээлттэй байх завсрыг</strong> заана
+          (жишээ: <code>2026-03-25T09:00:00+08:00</code>).
+        </p>
+      </div>
+
       <div id="screen-upload" class="card">
         <p id="bootstrap-loading" class="bootstrap-loading hidden" role="status">
           Шалгалтын файлыг ачаалж байна…

@@ -260,6 +260,12 @@ h1 {
   font-size: 0.95rem;
 }
 
+.closed-message {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  margin: 0 0 0.75rem;
+}
+
 .session-url-hint {
   font-size: 0.875rem;
   color: var(--muted);
