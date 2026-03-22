@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "echo 'No build step (static + serverless API)'"
+    "build": "node scripts/build-static.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.34.3"
