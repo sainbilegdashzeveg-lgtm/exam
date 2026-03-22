@@ -2,7 +2,81 @@
 
 const PAGE_SIZE = 5;
 const KEYS = ["A", "B", "C", "D"];
-const STORAGE_KEY = "csv-quiz-v1";
+const STORAGE_PREFIX = "csv-quiz-v1";
+
+function hashString(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16);
+}
+
+function sanitizeQuizId(raw) {
+  if (raw == null) return "";
+  const s = String(raw).trim();
+  if (!s || s.length > 64 || !/^[a-zA-Z0-9_-]+$/.test(s)) return "";
+  return s;
+}
+
+function getQuizStorageSlot() {
+  try {
+    const q = sanitizeQuizId(new URLSearchParams(window.location.search).get("quiz"));
+    return q || "default";
+  } catch {
+    return "default";
+  }
+}
+
+function getStorageKey() {
+  const quizSlot = getQuizStorageSlot();
+  let key = `${STORAGE_PREFIX}:q:${quizSlot}`;
+  let raw = "";
+  try {
+    raw = new URLSearchParams(window.location.search).get("s") || "";
+  } catch {
+    raw = "";
+  }
+  const t = String(raw).trim().slice(0, 128);
+  if (t) key += `:s${hashString(t)}`;
+  return key;
+}
+
+function updateSessionUrlHint() {
+  const el = document.getElementById("session-url-hint");
+  if (!el) return;
+  let raw = "";
+  try {
+    raw = new URLSearchParams(window.location.search).get("s") || "";
+  } catch {
+    raw = "";
+  }
+  const q = sanitizeQuizId(
+    (() => {
+      try {
+        return new URLSearchParams(window.location.search).get("quiz");
+      } catch {
+        return "";
+      }
+    })()
+  );
+  let quizLine = "";
+  if (q) {
+    quizLine = ` Одоо «${q}» шалгалт (?quiz=).`;
+  } else {
+    quizLine = " Одоо үндсэн quiz.csv (эсвэл ?quiz=байхгүй).";
+  }
+  if (String(raw).trim()) {
+    el.textContent =
+      "Холбоосонд ?s=… түлхүүр байна — түр завсарлах, дүн зөвхөн энэ түлхүүр + энэ хөтөч + энэ шалгалтаар хадгалагдана. Өөр оюутанд өөр ?s=." +
+      quizLine;
+  } else {
+    el.textContent =
+      "Овог нэрээ дүн гарсны дараа «Багшид илгээх»-д бичнэ. Дахин ороход хөтөч таныг нэрээр биш localStorage-аар таньна; нэг утсан дээр олон оюутан бол ?s=дугаар ашиглана." +
+      quizLine;
+  }
+}
 
 const els = {
   screenUpload: document.getElementById("screen-upload"),
@@ -23,6 +97,8 @@ const els = {
   scoreDetail: document.getElementById("score-detail"),
   review: document.getElementById("review"),
   btnRestart: document.getElementById("btn-restart"),
+  btnScrollReview: document.getElementById("btn-scroll-review"),
+  reviewSection: document.getElementById("review-section"),
   studentName: document.getElementById("student-name"),
   studentId: document.getElementById("student-id"),
   btnSubmitTeacher: document.getElementById("btn-submit-teacher"),
@@ -139,6 +215,72 @@ function syncQuizId() {
   }
 }
 
+function applyQuizFromPapaResults(results, options = {}) {
+  const silent = options.silent === true;
+  if (!silent) els.uploadError.textContent = "";
+
+  const fatal = (results.errors || []).find(
+    (e) => e.type === "Quotes" || e.code === "TooManyFields" || e.fatal
+  );
+  if (fatal) {
+    if (!silent) els.uploadError.textContent = fatal.message || "CSV parse error.";
+    return false;
+  }
+  try {
+    clearSession();
+    pool = processDataRows(results.data);
+    quiz = pool;
+    syncQuizId();
+    selected = quiz.map(() => null);
+    currentPage = 0;
+    hideSessionChrome();
+    persistProgress();
+    showScreen("quiz");
+    renderPage();
+    return true;
+  } catch (err) {
+    if (!silent) els.uploadError.textContent = err.message || "Could not read CSV.";
+    return false;
+  }
+}
+
+function fetchCsvText(url) {
+  return fetch(url, { cache: "no-store" })
+    .then((res) => (res.ok ? res.text() : null))
+    .catch(() => null);
+}
+
+function parseCsvTextApply(text) {
+  return new Promise((resolve) => {
+    Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => normalizeHeader(h),
+      complete: (results) => {
+        resolve(applyQuizFromPapaResults(results, { silent: true }));
+      },
+      error: () => resolve(false),
+    });
+  });
+}
+
+async function tryLoadBundledQuizCsv() {
+  let pid = "";
+  try {
+    pid = sanitizeQuizId(new URLSearchParams(window.location.search).get("quiz"));
+  } catch {
+    pid = "";
+  }
+  if (pid) {
+    const t = await fetchCsvText(`/quizzes/${pid}.csv`);
+    if (!t) return false;
+    return parseCsvTextApply(t);
+  }
+  const t2 = await fetchCsvText("/quiz.csv");
+  if (!t2) return false;
+  return parseCsvTextApply(t2);
+}
+
 function totalPages() {
   return Math.ceil(quiz.length / PAGE_SIZE);
 }
@@ -151,7 +293,7 @@ function normalizeSelected(arr, len) {
 
 function loadStored() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getStorageKey());
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (!data || data.v !== 1 || !Array.isArray(data.quiz) || !data.quiz.length) return null;
@@ -171,7 +313,7 @@ function saveSession(partial) {
       resumeToResults: false,
       finished: false,
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...base, ...partial }));
+    localStorage.setItem(getStorageKey(), JSON.stringify({ ...base, ...partial }));
   } catch (_) {
     /* quota or private mode */
   }
@@ -186,7 +328,7 @@ function persistProgress() {
 }
 
 function clearSession() {
-  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(getStorageKey());
   els.sessionHint.classList.add("hidden");
   els.btnContinueWrap.classList.add("hidden");
 }
@@ -381,27 +523,7 @@ els.fileInput.addEventListener("change", () => {
     skipEmptyLines: true,
     transformHeader: (h) => normalizeHeader(h),
     complete: (results) => {
-      const fatal = (results.errors || []).find(
-        (e) => e.type === "Quotes" || e.code === "TooManyFields" || e.fatal
-      );
-      if (fatal) {
-        els.uploadError.textContent = fatal.message || "CSV parse error.";
-        return;
-      }
-      try {
-        clearSession();
-        pool = processDataRows(results.data);
-        quiz = pool;
-        syncQuizId();
-        selected = quiz.map(() => null);
-        currentPage = 0;
-        hideSessionChrome();
-        persistProgress();
-        showScreen("quiz");
-        renderPage();
-      } catch (err) {
-        els.uploadError.textContent = err.message || "Could not read CSV.";
-      }
+      applyQuizFromPapaResults(results, { silent: false });
     },
     error: (err) => {
       els.uploadError.textContent = err.message || "Failed to parse file.";
@@ -464,6 +586,12 @@ els.btnRestart.addEventListener("click", () => {
   }
 });
 
+if (els.btnScrollReview && els.reviewSection) {
+  els.btnScrollReview.addEventListener("click", () => {
+    els.reviewSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
 if (els.btnSubmitTeacher) {
   els.btnSubmitTeacher.addEventListener("click", async () => {
     const name = els.studentName.value.trim();
@@ -491,16 +619,44 @@ if (els.btnSubmitTeacher) {
         body: JSON.stringify(body),
       });
       const j = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(j.error || String(res.status));
+      if (!res.ok) throw new Error(j.error || `Алдаа ${res.status}`);
       els.submitStatus.textContent =
-        "Амжилттай илгээгдлээ. Багш teacher.html хуудсаар «Ачаалах» дарж харна.";
+        "Амжилттай илгээгдлээ. Дээрх «Асуулт бүрийн шалгалт»-аас зөв, буруу хариултаа дахин харж болно. Багш teacher.html → «Ачаалах».";
+      if (els.reviewSection) {
+        requestAnimationFrame(() => {
+          els.reviewSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
     } catch (e) {
+      const fallback =
+        "Илгээж чадсангүй. Сүлжээ эсвэл тохиргоо шалгана (Vercel: Upstash Redis env, локал: server/npm start).";
       els.submitStatus.textContent =
-        "Илгээж чадсангүй. Сервер ажиллаж байгаа эсэхийг шалгана уу (server → npm start).";
+        e instanceof Error && e.message ? e.message : fallback;
     }
   });
 }
 
-if (!initFromStorage()) {
-  showScreen("upload");
+updateSessionUrlHint();
+
+const bootLoadingEl = document.getElementById("bootstrap-loading");
+
+async function bootstrap() {
+  if (initFromStorage()) return;
+  if (bootLoadingEl) bootLoadingEl.classList.remove("hidden");
+  let pid = "";
+  try {
+    pid = sanitizeQuizId(new URLSearchParams(window.location.search).get("quiz"));
+  } catch {
+    pid = "";
+  }
+  const ok = await tryLoadBundledQuizCsv();
+  if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
+  if (!ok) {
+    if (pid) {
+      els.uploadError.textContent = `«${pid}» шалгалт олдсонгүй. Файл quizzes/${pid}.csv байгаа эсэхийг шалгана уу.`;
+    }
+    showScreen("upload");
+  }
 }
+
+bootstrap();

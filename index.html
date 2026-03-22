@@ -16,10 +16,14 @@
     <main>
       <h1>CSV Quiz</h1>
       <p class="sub">
-        Upload a quiz CSV. All questions are asked; up to five appear on each screen, then your score.
+        Багш <code>quiz.csv</code> (үндсэн) эсвэл <code>?quiz=нэр</code> (<code>quizzes/нэр.csv</code>) ашиглана. Оюутанд ихэвчлэн CSV оруулах шаардлагагүй. Олон шалгалтын линк:
+        <a href="manage-quizzes.html">manage-quizzes.html</a>
       </p>
 
       <div id="screen-upload" class="card">
+        <p id="bootstrap-loading" class="bootstrap-loading hidden" role="status">
+          Шалгалтын файлыг ачаалж байна…
+        </p>
         <p id="session-hint" class="session-hint hidden" role="status"></p>
         <p id="btn-continue-wrap" class="hidden" style="margin-bottom: 1rem">
           <button type="button" class="btn btn-primary" id="btn-continue">
@@ -28,12 +32,15 @@
         </p>
         <div class="upload-zone">
           <label for="csv-file">
-            <strong>Choose a CSV file</strong>
-            <div class="upload-hint">Or drag and drop (use the file picker)</div>
+            <strong>Өөр шалгалтын CSV сонгох</strong>
+            <div class="upload-hint">
+              Заавал биш — серверт <code>quiz.csv</code> байвал автоматаар ачаална. Өөр файл ашиглах бол энд сонгоно.
+            </div>
           </label>
           <input id="csv-file" type="file" accept=".csv,text/csv" />
         </div>
         <p id="upload-error" class="error" role="alert"></p>
+        <p id="session-url-hint" class="session-url-hint" role="note"></p>
         <p class="upload-hint" style="margin-top: 1rem; text-align: left">
           Columns:
           <code>question</code>, <code>choice1</code> … <code>choice4</code> (or
@@ -61,7 +68,15 @@
         <h2>Дүн</h2>
         <div class="score-ring" id="score-value"></div>
         <p class="score-detail" id="score-detail"></p>
-        <div id="review"></div>
+        <p class="results-flow-hint">
+          <strong>Алхам 1.</strong> Доорх жагсаалтаар асуулт бүрийн зөв, буруу хариултаа шалгана.
+          <strong>Алхам 2.</strong> Дараа нь багшид илгээнэ. Илгээсний дараа ч гэсэн энэ жагсаалтыг дахин харж болно.
+        </p>
+
+        <section id="review-section" class="review-section" aria-labelledby="review-heading">
+          <h3 id="review-heading" class="review-section__title">Асуулт бүрийн шалгалт</h3>
+          <div id="review"></div>
+        </section>
 
         <div class="submit-panel" id="submit-panel">
           <h3 class="submit-panel__title">Багшид илгээх</h3>
@@ -73,22 +88,35 @@
             <strong>Локал:</strong> <code>server</code> хавтаснаас <code>npm start</code>
             (файлд бичнэ, Redis шаардлагагүй).
           </p>
-          <label class="field-label" for="student-name">Овог нэр <span class="req">*</span></label>
+          <label class="field-label" for="student-name">
+            Овог нэр <span class="req">*</span>
+            <span class="field-hint">(багш таныг илгээлт дээр энэ нэрээр ялгана)</span>
+          </label>
           <input type="text" id="student-name" class="field-input" maxlength="120" autocomplete="name" />
-          <label class="field-label" for="student-id">Оюутны ID / код (сонголттой)</label>
+          <label class="field-label" for="student-id">
+            Оюутны ID / код (сонголттой)
+            <span class="field-hint">(багшийн самбарт нэмэлтээр харагдана)</span>
+          </label>
           <input type="text" id="student-id" class="field-input" maxlength="64" autocomplete="username" />
           <p id="quiz-id-hint" class="upload-hint submit-panel__hint"></p>
           <button type="button" class="btn btn-primary" id="btn-submit-teacher">Илгээх</button>
           <p id="submit-status" class="upload-hint" role="status"></p>
+          <button type="button" class="btn btn-ghost btn--compact" id="btn-scroll-review">
+            Дүнгийн жагсаалт руу буцах
+          </button>
         </div>
 
-        <div class="nav-row" style="justify-content: flex-start; margin-top: 1.5rem">
-          <button type="button" class="btn btn-primary" id="btn-restart">Дахин эхлэх</button>
+        <div class="results-footer-actions">
+          <p class="results-footer-actions__hint">
+            Зөвхөн шалгалтыг бүрэн дахин өгөхийг хүсвэл доорх товчийг дарна — одоогийн дүн, хариулт арилна.
+          </p>
+          <button type="button" class="btn btn-ghost" id="btn-restart">Шинээр эхлэх (шалгалтыг дахин өгнө)</button>
         </div>
       </div>
 
       <footer>
-        Papa Parse · <a href="teacher.html">Багшийн самбар</a>
+        Papa Parse · <a href="manage-quizzes.html">Шалгалтууд (багш)</a> ·
+        <a href="teacher.html">Илгээлт</a>
       </footer>
     </main>
 

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="mn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Шалгалтууд — багш</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .mq-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        margin-top: 1rem;
+      }
+      .mq-table th,
+      .mq-table td {
+        border: 1px solid var(--border);
+        padding: 0.55rem 0.65rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      .mq-table th {
+        color: var(--muted);
+      }
+      .mq-link {
+        word-break: break-all;
+        font-size: 0.8rem;
+        font-family: ui-monospace, monospace;
+      }
+      .mq-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .mq-note {
+        font-size: 0.875rem;
+        color: var(--muted);
+        line-height: 1.55;
+        margin-top: 1.25rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        border-left: 3px solid var(--accent);
+      }
+      .mq-note code {
+        font-size: 0.85em;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Олон шалгалт — линк хуулах</h1>
+      <p class="sub">
+        Шалгалт бүр <code>quizzes/&lt;id&gt;.csv</code> файл + <code>quizzes/manifest.json</code> дахь жагсаалтаар бүртгэгдэнэ. Хадгалалт =
+        Git репо (push → Vercel deploy).
+      </p>
+
+      <div class="card">
+        <p id="mq-status" class="upload-hint">Ачаалж байна…</p>
+        <p id="mq-error" class="error hidden" role="alert"></p>
+
+        <table class="mq-table hidden" id="mq-table" aria-label="Шалгалтууд">
+          <thead>
+            <tr>
+              <th>Нэр</th>
+              <th>Оюутанд өгөх линк</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="mq-tbody"></tbody>
+        </table>
+
+        <div class="mq-note">
+          <strong>Шинэ шалгалт нэмэх:</strong>
+          <ol style="margin: 0.5rem 0 0 1.1rem; padding: 0">
+            <li><code>quizzes/myquiz.csv</code> файл үүсгэ (баганууд нь өмнөхтэй адил).</li>
+            <li><code>quizzes/manifest.json</code> дотор <code>id</code> (латин, тоо, _, -) + <code>title</code> нэм.</li>
+            <li>Git push хий — Vercel дахин deploy.</li>
+          </ol>
+          <p style="margin: 0.75rem 0 0">
+            <strong>Үндсэн шалгалт</strong> (<code>quiz.csv</code>): линк дээр <code>?quiz=</code> байхгүй бол энэ ачаалагдана.
+          </p>
+        </div>
+      </div>
+
+      <footer style="margin-top: 2rem">
+        <a href="index.html">Шалгалт</a> · <a href="teacher.html">Илгээлтийн самбар</a>
+      </footer>
+    </main>
+
+    <script>
+      function esc(s) {
+        const d = document.createElement("div");
+        d.textContent = s == null ? "" : String(s);
+        return d.innerHTML;
+      }
+
+      function baseUrl() {
+        const u = new URL(window.location.href);
+        u.pathname = u.pathname.replace(/[^/]+$/, "");
+        if (!u.pathname.endsWith("/")) u.pathname += "/";
+        return u.origin + u.pathname;
+      }
+
+      function studentUrl(quizParam) {
+        const b = baseUrl();
+        const path = b.endsWith("/") ? b + "index.html" : b;
+        const u = new URL(path);
+        if (quizParam) u.searchParams.set("quiz", quizParam);
+        return u.toString();
+      }
+
+      async function load() {
+        const status = document.getElementById("mq-status");
+        const err = document.getElementById("mq-error");
+        const table = document.getElementById("mq-table");
+        const tbody = document.getElementById("mq-tbody");
+        err.classList.add("hidden");
+        err.textContent = "";
+
+        const defaultUrl = studentUrl("");
+        tbody.innerHTML = "";
+
+        const rowDefault = document.createElement("tr");
+        rowDefault.innerHTML = `
+          <td><strong>Үндсэн</strong> (quiz.csv)</td>
+          <td class="mq-link">${esc(defaultUrl)}</td>
+          <td><button type="button" class="btn btn-primary btn-sm-mq" data-copy="${esc(defaultUrl)}">Хуулах</button></td>
+        `;
+        tbody.appendChild(rowDefault);
+
+        try {
+          const res = await fetch("/quizzes/manifest.json", { cache: "no-store" });
+          if (!res.ok) throw new Error("manifest олдсонгүй");
+          const data = await res.json();
+          const list = Array.isArray(data.quizzes) ? data.quizzes : [];
+          for (const q of list) {
+            if (!q || !q.id) continue;
+            const url = studentUrl(q.id);
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${esc(q.title || q.id)}<br/><span class="upload-hint">id: ${esc(q.id)}</span></td>
+              <td class="mq-link">${esc(url)}</td>
+              <td><button type="button" class="btn btn-primary btn-sm-mq" data-copy="${esc(url)}">Хуулах</button></td>
+            `;
+            tbody.appendChild(tr);
+          }
+        } catch (e) {
+          err.textContent =
+            "manifest.json ачаалж чадсангүй — зөвхөн үндсэн линк харагдаж байна. quizzes/manifest.json шалгана уу.";
+          err.classList.remove("hidden");
+        }
+
+        status.classList.add("hidden");
+        table.classList.remove("hidden");
+
+        tbody.querySelectorAll("button[data-copy]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const t = btn.getAttribute("data-copy");
+            navigator.clipboard.writeText(t).then(
+              () => {
+                btn.textContent = "Хуулсан!";
+                setTimeout(() => {
+                  btn.textContent = "Хуулах";
+                }, 2000);
+              },
+              () => alert(t)
+            );
+          });
+        });
+      }
+
+      load();
+    </script>
+    <style>
+      .btn-sm-mq {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.85rem;
+      }
+    </style>
+  </body>
+</html>

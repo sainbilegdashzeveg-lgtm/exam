@@ -1,0 +1,9 @@
+{
+  "quizzes": [
+    {
+      "id": "demo",
+      "title": "Жишээ шалгалт",
+      "description": "Файл: quizzes/demo.csv — өөрчлөж болно"
+    }
+  ]
+}

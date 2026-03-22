@@ -11,7 +11,9 @@ const files = [
   "app.js",
   "styles.css",
   "teacher.html",
+  "manage-quizzes.html",
   "sample-quiz.csv",
+  "quiz.csv",
 ];
 
 fs.rmSync(out, { recursive: true, force: true });
@@ -23,5 +25,18 @@ for (const f of files) {
     fs.copyFileSync(src, path.join(out, f));
   }
 }
+
+function copyDir(src, dest) {
+  if (!fs.existsSync(src)) return;
+  fs.mkdirSync(dest, { recursive: true });
+  for (const ent of fs.readdirSync(src, { withFileTypes: true })) {
+    const from = path.join(src, ent.name);
+    const to = path.join(dest, ent.name);
+    if (ent.isDirectory()) copyDir(from, to);
+    else fs.copyFileSync(from, to);
+  }
+}
+
+copyDir(path.join(root, "quizzes"), path.join(out, "quizzes"));
 
 console.log("Static files copied to build/");
