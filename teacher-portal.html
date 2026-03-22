@@ -224,6 +224,7 @@
             <button type="button" class="btn btn-primary" id="tp-list-refresh">Сэргээх</button>
           </div>
           <h2 style="margin-top: 0">Бэлдсэн шалгалтууд</h2>
+          <p id="tp-list-success" class="upload-hint tp-hidden" role="status" style="color: var(--accent)"></p>
           <p id="tp-list-err" class="error" role="alert"></p>
           <div class="tp-table-wrap">
             <table class="tp-table" aria-label="Шалгалтууд">
@@ -384,6 +385,7 @@
         listBack: document.getElementById("tp-list-back"),
         listRefresh: document.getElementById("tp-list-refresh"),
         listErr: document.getElementById("tp-list-err"),
+        listSuccess: document.getElementById("tp-list-success"),
         listTbody: document.getElementById("tp-list-tbody"),
         modal: document.getElementById("tp-modal"),
         modalTitle: document.getElementById("tp-modal-title"),
@@ -487,28 +489,38 @@
           });
           const j = await res.json().catch(() => ({}));
           if (!res.ok) {
-            els.csvSaveErr.textContent = j.error || "Хадгалахад алдаа.";
+            if (res.status === 401) {
+              showLogin();
+              els.loginErr.textContent = "Нэвтрэлт дууссан — дахин нууц үгээ оруулна уу.";
+            }
+            els.csvSaveErr.textContent =
+              j.error || "Хадгалахад алдаа (" + res.status + ").";
             return;
           }
           const q = j.quiz;
+          if (mode === "draft") {
+            resetCsvWizard();
+            if (els.listSuccess) {
+              els.listSuccess.textContent =
+                "Ноорог серверт хадгалагдлаа — доор жагсаалтад «Ноорог» гэж харагдана.";
+              els.listSuccess.classList.remove("tp-hidden");
+            }
+            showPanel("list");
+            await loadList();
+            return;
+          }
           els.csvStep1.classList.add("tp-hidden");
           els.csvStep2.classList.add("tp-hidden");
           els.csvDone.classList.remove("tp-hidden");
           const link = q && q.id ? studentLink(q.id) : "";
-          if (mode === "draft") {
-            els.doneLink.textContent =
-              `Ноорог хадгалагдлаа. «Бэлдсэн шалгалтууд» → «Эхлүүлэх» дармагц оюутанд өгөх линк гарна. ID: ${q && q.id ? q.id : ""}`;
-            els.copyLink.style.display = "none";
-          } else {
-            els.doneLink.textContent = link;
-            els.copyLink.style.display = "inline-block";
-            els.copyLink.onclick = () => {
-              navigator.clipboard.writeText(link).then(
-                () => alert("Хуулсан"),
-                () => alert(link)
-              );
-            };
-          }
+          els.doneLink.textContent = link;
+          els.copyLink.style.display = "inline-block";
+          els.copyLink.onclick = () => {
+            navigator.clipboard.writeText(link).then(
+              () => alert("Хуулсан"),
+              () => alert(link)
+            );
+          };
         } catch {
           els.csvSaveErr.textContent = "Сүлжээний алдаа.";
         }
@@ -596,6 +608,7 @@
           const res = await fetch("/api/teacher-quiz", { headers: { Authorization: "Bearer " + token } });
           const j = await res.json().catch(() => ({}));
           if (!res.ok) {
+            if (els.listSuccess) els.listSuccess.classList.add("tp-hidden");
             els.listErr.textContent = j.error || "Ачаалахад алдаа.";
             if (res.status === 401) showLogin();
             return;
@@ -663,6 +676,7 @@
       });
       els.btnLogout.addEventListener("click", showLogin);
       els.goCsv.addEventListener("click", () => {
+        if (els.listSuccess) els.listSuccess.classList.add("tp-hidden");
         resetCsvWizard();
         showPanel("csv");
       });

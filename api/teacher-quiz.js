@@ -79,7 +79,17 @@ export default async function handler(req, res) {
       return res.end(JSON.stringify({ error: "Invalid JSON" }));
     }
 
-    const action = b && typeof b.action === "string" ? b.action : "";
+    if (!b || typeof b !== "object" || Array.isArray(b)) {
+      res.statusCode = 400;
+      return res.end(
+        JSON.stringify({
+          error:
+            "Хүсэлтийн өгөгдөл хоосон байна. JSON илгээгдсэн эсэхийг шалгана уу (их файл — хэмжээ).",
+        })
+      );
+    }
+
+    const action = String(b.action || "").trim().toLowerCase();
 
     if (action === "create") {
       const title =
@@ -92,17 +102,23 @@ export default async function handler(req, res) {
         1,
         Math.min(50_000, Number(b.questionCount) | 0)
       );
-      const csvText =
-        b.csvText != null ? String(b.csvText).slice(0, MAX_CSV) : "";
-      const mode = b.mode === "draft" ? "draft" : "start";
+      const csvText = String(b.csvText != null ? b.csvText : "")
+        .trim()
+        .slice(0, MAX_CSV);
+      const mode =
+        String(b.mode || "").toLowerCase() === "draft" ? "draft" : "start";
 
       if (!title) {
         res.statusCode = 400;
         return res.end(JSON.stringify({ error: "Нэр шаардлагатай." }));
       }
-      if (!csvText || csvText.length < 10) {
+      if (!csvText) {
         res.statusCode = 400;
         return res.end(JSON.stringify({ error: "CSV агуулга хоосон байна." }));
+      }
+      if (questionCount < 1) {
+        res.statusCode = 400;
+        return res.end(JSON.stringify({ error: "Асуултын тоо 0 байж болохгүй." }));
       }
 
       const id = newQuizId();
