@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="mn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CSV Quiz</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <h1>CSV Quiz</h1>
+      <p class="sub">
+        Upload a quiz CSV. All questions are asked; up to five appear on each screen, then your score.
+      </p>
+
+      <div id="screen-upload" class="card">
+        <p id="session-hint" class="session-hint hidden" role="status"></p>
+        <p id="btn-continue-wrap" class="hidden" style="margin-bottom: 1rem">
+          <button type="button" class="btn btn-primary" id="btn-continue">
+            Үргэлжлүүлэх
+          </button>
+        </p>
+        <div class="upload-zone">
+          <label for="csv-file">
+            <strong>Choose a CSV file</strong>
+            <div class="upload-hint">Or drag and drop (use the file picker)</div>
+          </label>
+          <input id="csv-file" type="file" accept=".csv,text/csv" />
+        </div>
+        <p id="upload-error" class="error" role="alert"></p>
+        <p class="upload-hint" style="margin-top: 1rem; text-align: left">
+          Columns:
+          <code>question</code>, <code>choice1</code> … <code>choice4</code> (or
+          <code>a</code> … <code>d</code>), and <code>correct</code> as 1–4, A–D, or the exact
+          correct option text. See <code>sample-quiz.csv</code>.
+        </p>
+      </div>
+
+      <div id="screen-quiz" class="card hidden">
+        <div class="question-num" id="page-heading"></div>
+        <div id="questions-container"></div>
+        <div class="nav-row nav-row--spread">
+          <button type="button" class="btn btn-ghost" id="btn-pause">Завсарлах</button>
+          <div class="nav-row__right">
+            <button type="button" class="btn btn-ghost" id="btn-prev">Өмнөх</button>
+            <button type="button" class="btn btn-primary" id="btn-next">Дараах</button>
+          </div>
+        </div>
+        <div class="toolbar">
+          <span class="progress" id="progress"></span>
+        </div>
+      </div>
+
+      <div id="screen-results" class="card hidden">
+        <h2>Дүн</h2>
+        <div class="score-ring" id="score-value"></div>
+        <p class="score-detail" id="score-detail"></p>
+        <div id="review"></div>
+
+        <div class="submit-panel" id="submit-panel">
+          <h3 class="submit-panel__title">Багшид илгээх</h3>
+          <p class="upload-hint">
+            <strong>Vercel:</strong> төсөлд <code>UPSTASH_REDIS_REST_URL</code>,
+            <code>UPSTASH_REDIS_REST_TOKEN</code>, <code>TEACHER_KEY</code> (Vercel
+            Environment Variables) оруулна. Upstash Redis үнэгүй үүсгэх:
+            <a href="https://upstash.com" target="_blank" rel="noopener">upstash.com</a>.
+            <strong>Локал:</strong> <code>server</code> хавтаснаас <code>npm start</code>
+            (файлд бичнэ, Redis шаардлагагүй).
+          </p>
+          <label class="field-label" for="student-name">Овог нэр <span class="req">*</span></label>
+          <input type="text" id="student-name" class="field-input" maxlength="120" autocomplete="name" />
+          <label class="field-label" for="student-id">Оюутны ID / код (сонголттой)</label>
+          <input type="text" id="student-id" class="field-input" maxlength="64" autocomplete="username" />
+          <p id="quiz-id-hint" class="upload-hint submit-panel__hint"></p>
+          <button type="button" class="btn btn-primary" id="btn-submit-teacher">Илгээх</button>
+          <p id="submit-status" class="upload-hint" role="status"></p>
+        </div>
+
+        <div class="nav-row" style="justify-content: flex-start; margin-top: 1.5rem">
+          <button type="button" class="btn btn-primary" id="btn-restart">Дахин эхлэх</button>
+        </div>
+      </div>
+
+      <footer>
+        Papa Parse · <a href="teacher.html">Багшийн самбар</a>
+      </footer>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="mn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Багшийн самбар — Шалгалтын дүн</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .teacher-tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+        margin-bottom: 1.25rem;
+      }
+      .teacher-tools label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      .teacher-tools input {
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: inherit;
+        padding: 0.5rem 0.65rem;
+        min-width: 200px;
+      }
+      .teacher-table-wrap {
+        overflow-x: auto;
+      }
+      table.teacher-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+      }
+      .teacher-table th,
+      .teacher-table td {
+        border: 1px solid var(--border);
+        padding: 0.5rem 0.65rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      .teacher-table th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .teacher-table tr:nth-child(even) td {
+        background: rgba(0, 0, 0, 0.15);
+      }
+      .teacher-table button.linkish {
+        background: none;
+        border: none;
+        color: var(--accent);
+        cursor: pointer;
+        font: inherit;
+        text-decoration: underline;
+        padding: 0;
+      }
+      .detail-panel {
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.2);
+        font-size: 0.875rem;
+      }
+      .detail-panel h3 {
+        margin: 0 0 0.75rem;
+        font-size: 1rem;
+      }
+      .detail-q {
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .detail-q:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Багшийн самбар</h1>
+      <p class="sub">
+        Оюутнууд «Багшид илгээх» дарсан илгээлтүүд энд харагдана.
+        <strong>Vercel</strong> дээр байршуулсан бол Upstash Redis + түлхүүр тохируулсан эсэхээ шалгана.
+        Зөвхөн локалд турших бол: <code>cd server && npm start</code>.
+      </p>
+
+      <div class="card">
+        <div class="teacher-tools">
+          <label>
+            Нууц түлхүүр (TEACHER_KEY)
+            <input type="password" id="teacher-key" autocomplete="off" placeholder="teacher-demo-key" />
+          </label>
+          <button type="button" class="btn btn-primary" id="btn-load">Ачаалах</button>
+        </div>
+        <p id="teacher-error" class="error" role="alert"></p>
+        <label style="display: block; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--muted)">
+          Шүүх: шалгалтын ID (quizId)
+          <input type="text" id="filter-quiz" placeholder="Бүгдийг харуулах — хоосон үлдээнэ" style="margin-top: 0.35rem; width: 100%; max-width: 360px; display: block; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border); background: rgba(0,0,0,0.25); color: var(--text); font-family: inherit;" />
+        </label>
+        <div class="teacher-table-wrap">
+          <table class="teacher-table" id="tbl" aria-label="Илгээлтүүд">
+            <thead>
+              <tr>
+                <th>Цаг</th>
+                <th>Оюутан</th>
+                <th>ID</th>
+                <th>Дүн</th>
+                <th>quizId</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div id="detail" class="detail-panel hidden"></div>
+      </div>
+
+      <p class="upload-hint" style="margin-top: 1.5rem">
+        Аюулгүй байдлын тулд production дээр <code>TEACHER_KEY</code>-ийг өөрчилж, HTTPS ашиглана.
+      </p>
+      <footer><a href="index.html">Шалгалт руу буцах</a></footer>
+    </main>
+
+    <script>
+      const els = {
+        key: document.getElementById("teacher-key"),
+        btnLoad: document.getElementById("btn-load"),
+        err: document.getElementById("teacher-error"),
+        tbody: document.getElementById("tbody"),
+        filterQuiz: document.getElementById("filter-quiz"),
+        detail: document.getElementById("detail"),
+      };
+
+      let cache = [];
+
+      function esc(s) {
+        const d = document.createElement("div");
+        d.textContent = s == null ? "" : String(s);
+        return d.innerHTML;
+      }
+
+      function fmtTime(iso) {
+        try {
+          const d = new Date(iso);
+          return d.toLocaleString("mn-MN");
+        } catch {
+          return iso;
+        }
+      }
+
+      function renderRows(rows) {
+        const qf = els.filterQuiz.value.trim().toLowerCase();
+        const filtered = qf
+          ? rows.filter((r) => String(r.quizId).toLowerCase().includes(qf))
+          : rows;
+
+        els.tbody.innerHTML = "";
+        for (const r of filtered) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${esc(fmtTime(r.submittedAt))}</td>
+            <td>${esc(r.studentName)}</td>
+            <td>${esc(r.studentId || "—")}</td>
+            <td>${esc(r.score)} / ${esc(r.total)}</td>
+            <td><code>${esc(r.quizId)}</code></td>
+            <td><button type="button" class="linkish" data-id="${esc(r.id)}">Дэлгэрэнгүй</button></td>
+          `;
+          els.tbody.appendChild(tr);
+        }
+
+        els.tbody.querySelectorAll("button[data-id]").forEach((btn) => {
+          btn.addEventListener("click", () => showDetail(btn.getAttribute("data-id")));
+        });
+      }
+
+      function showDetail(id) {
+        const r = cache.find((x) => x.id === id);
+        if (!r) return;
+        els.detail.classList.remove("hidden");
+        const items = r.items || [];
+        let html = `<h3>${esc(r.studentName)} — ${esc(r.score)}/${esc(r.total)}</h3>`;
+        if (!items.length) {
+          html += "<p>Асуулт бүрийн дэлгэрэнгүй илгээгдээгүй.</p>";
+        } else {
+          for (const it of items) {
+            const ok = it.correct ? "Зөв" : "Буруу";
+            const picked =
+              it.pickedText != null
+                ? `${esc(it.pickedLabel || "")} ${esc(it.pickedText)}`.trim()
+                : "Хариулсангүй";
+            html += `<div class="detail-q">
+              <strong>${esc(it.n)}.</strong> ${esc(it.question)}<br/>
+              <span class="${it.correct ? "correct" : "incorrect"}">${ok}</span> —
+              Сонгосон: ${picked}<br/>
+              Зөв: ${esc(it.correctLabel || "")} ${esc(it.correctText || "")}
+            </div>`;
+          }
+        }
+        els.detail.innerHTML = html;
+        els.detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      async function load() {
+        els.err.textContent = "";
+        const key = els.key.value.trim();
+        if (!key) {
+          els.err.textContent = "Түлхүүр оруулна уу.";
+          return;
+        }
+        try {
+          const res = await fetch("/api/submissions?key=" + encodeURIComponent(key));
+          if (!res.ok) {
+            const j = await res.json().catch(() => ({}));
+            els.err.textContent = j.error || "Ачаалахад алдаа (" + res.status + ").";
+            return;
+          }
+          cache = await res.json();
+          renderRows(cache);
+          els.detail.classList.add("hidden");
+        } catch (e) {
+          els.err.textContent =
+            "API ажиллахгүй байна. Vercel дээр env-үүд эсвэл локалд server/npm start шалгана.";
+        }
+      }
+
+      els.btnLoad.addEventListener("click", load);
+      els.filterQuiz.addEventListener("input", () => renderRows(cache));
+    </script>
+  </body>
+</html>
