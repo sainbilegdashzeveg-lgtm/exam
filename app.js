@@ -4,6 +4,9 @@ const PAGE_SIZE = 5;
 const KEYS = ["A", "B", "C", "D"];
 const STORAGE_PREFIX = "csv-quiz-v1";
 
+/** Багш эхлүүлэх/дуусгах бүрт шинэчлэгдэнэ — localStorage түлхүүрт орох (t_ шалгалт) */
+let dynSessionEpoch = "";
+
 function hashString(str) {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -32,6 +35,10 @@ function getQuizStorageSlot() {
 function getStorageKey() {
   const quizSlot = getQuizStorageSlot();
   let key = `${STORAGE_PREFIX}:q:${quizSlot}`;
+  if (quizSlot.startsWith("t_")) {
+    const e = dynSessionEpoch || "0";
+    key += `:e:${e}`;
+  }
   let raw = "";
   try {
     raw = new URLSearchParams(window.location.search).get("s") || "";
@@ -442,6 +449,10 @@ async function checkDynamicQuizWindow(pid) {
       cache: "no-store",
     });
     const j = await res.json().catch(() => ({}));
+    dynSessionEpoch =
+      typeof j.sessionEpoch === "string" && j.sessionEpoch.length
+        ? j.sessionEpoch
+        : "0";
     if (res.status === 503) {
       return {
         ok: false,
@@ -463,6 +474,7 @@ async function checkDynamicQuizWindow(pid) {
       detail: j.detail || "",
     };
   } catch {
+    dynSessionEpoch = "0";
     return {
       ok: false,
       message: "Сүлжээний алдаа — шалгалтын төлөв ачаалагдсангүй.",
@@ -795,28 +807,48 @@ updateSessionUrlHint();
 const bootLoadingEl = document.getElementById("bootstrap-loading");
 
 async function bootstrap() {
-  if (initFromStorage()) return;
-  if (bootLoadingEl) bootLoadingEl.classList.remove("hidden");
   let pid = "";
   try {
     pid = sanitizeQuizId(new URLSearchParams(window.location.search).get("quiz"));
   } catch {
     pid = "";
   }
-  const slot = pid || "default";
-  const win =
-    pid && pid.startsWith("t_")
-      ? await checkDynamicQuizWindow(pid)
-      : await checkQuizWindow(slot);
-  if (!win.ok) {
-    if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
-    const cm = document.getElementById("closed-message");
-    const cd = document.getElementById("closed-window-detail");
-    if (cm) cm.textContent = win.message || "";
-    if (cd) cd.textContent = win.detail || "";
-    showScreen("closed");
-    return;
+  dynSessionEpoch = "";
+
+  const isDynamic = Boolean(pid && pid.startsWith("t_"));
+
+  if (isDynamic) {
+    if (bootLoadingEl) bootLoadingEl.classList.remove("hidden");
+    const win = await checkDynamicQuizWindow(pid);
+    if (initFromStorage()) {
+      if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
+      return;
+    }
+    if (!win.ok) {
+      if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
+      const cm = document.getElementById("closed-message");
+      const cd = document.getElementById("closed-window-detail");
+      if (cm) cm.textContent = win.message || "";
+      if (cd) cd.textContent = win.detail || "";
+      showScreen("closed");
+      return;
+    }
+  } else {
+    if (initFromStorage()) return;
+    if (bootLoadingEl) bootLoadingEl.classList.remove("hidden");
+    const slot = pid || "default";
+    const win = await checkQuizWindow(slot);
+    if (!win.ok) {
+      if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
+      const cm = document.getElementById("closed-message");
+      const cd = document.getElementById("closed-window-detail");
+      if (cm) cm.textContent = win.message || "";
+      if (cd) cd.textContent = win.detail || "";
+      showScreen("closed");
+      return;
+    }
   }
+
   const ok = await tryLoadBundledQuizCsv();
   if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
   if (!ok) {

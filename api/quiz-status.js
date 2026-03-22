@@ -16,6 +16,12 @@ function formatTs(ts) {
   }
 }
 
+function epochOf(q) {
+  return typeof q.sessionEpoch === "string" && q.sessionEpoch.length
+    ? q.sessionEpoch
+    : "0";
+}
+
 export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -59,6 +65,7 @@ export default async function handler(req, res) {
         JSON.stringify({
           ok: false,
           reason: "draft",
+          sessionEpoch: epochOf(q),
           message:
             "Энэ шалгалт хараахан эхлээгүй — багш «Эхлүүлэх» дарсны дараа оюутанд нээгдэнэ.",
           detail: "",
@@ -71,6 +78,7 @@ export default async function handler(req, res) {
         JSON.stringify({
           ok: false,
           reason: "finished",
+          sessionEpoch: epochOf(q),
           message: "Энэ шалгалт багшаар дуусгагдсан.",
           detail: q.finishedAt
             ? `Дуусгасан: ${formatTs(q.finishedAt)}`
@@ -84,6 +92,7 @@ export default async function handler(req, res) {
       return res.end(
         JSON.stringify({
           ok: true,
+          sessionEpoch: epochOf(q),
           title: q.title || "",
           questionCount: q.questionCount || 0,
           openAt: q.openAt,
@@ -104,6 +113,7 @@ export default async function handler(req, res) {
     return res.end(
       JSON.stringify({
         ok: false,
+        sessionEpoch: epochOf(q),
         reason: sub.reason || "closed",
         message,
         detail,

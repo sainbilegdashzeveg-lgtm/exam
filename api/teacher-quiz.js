@@ -15,6 +15,10 @@ function newQuizId() {
   return `t_${randomBytes(14).toString("hex")}`;
 }
 
+function newSessionEpoch() {
+  return randomBytes(8).toString("hex");
+}
+
 export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -125,6 +129,7 @@ export default async function handler(req, res) {
         closeAt,
         createdAt,
         finishedAt: null,
+        sessionEpoch: newSessionEpoch(),
       };
 
       await redis.set(dynamicQuizStorageKey(id), JSON.stringify(record));
@@ -159,6 +164,7 @@ export default async function handler(req, res) {
       q.status = "active";
       q.openAt = new Date(t0).toISOString();
       q.closeAt = new Date(t0 + (q.durationMinutes || 60) * 60_000).toISOString();
+      q.sessionEpoch = newSessionEpoch();
       await redis.set(dynamicQuizStorageKey(id), JSON.stringify(q));
       res.statusCode = 200;
       return res.end(JSON.stringify({ ok: true, quiz: stripCsvFromQuiz(q) }));
@@ -182,6 +188,7 @@ export default async function handler(req, res) {
       }
       q.status = "finished";
       q.finishedAt = new Date().toISOString();
+      q.sessionEpoch = newSessionEpoch();
       await redis.set(dynamicQuizStorageKey(id), JSON.stringify(q));
       res.statusCode = 200;
       return res.end(JSON.stringify({ ok: true, quiz: stripCsvFromQuiz(q) }));
