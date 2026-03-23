@@ -424,6 +424,27 @@ function formatTs(ts) {
   }
 }
 
+function applyClosedScreenHelp(isDynamicQuiz, notFound) {
+  const heading = document.getElementById("closed-heading");
+  const helpStatic = document.getElementById("closed-help-static");
+  const helpDynamic = document.getElementById("closed-help-dynamic");
+  if (heading) {
+    heading.textContent =
+      isDynamicQuiz && notFound
+        ? "Шалгалт олдсонгүй"
+        : "Шалгалтын хугацаанаас гадуур";
+  }
+  if (helpStatic && helpDynamic) {
+    if (isDynamicQuiz) {
+      helpStatic.classList.add("hidden");
+      helpDynamic.classList.remove("hidden");
+    } else {
+      helpDynamic.classList.add("hidden");
+      helpStatic.classList.remove("hidden");
+    }
+  }
+}
+
 async function checkQuizWindow(quizSlot) {
   const manifest = await fetchQuizManifest();
   const w = resolveWindowConfig(manifest, quizSlot);
@@ -465,6 +486,7 @@ async function checkDynamicQuizWindow(pid) {
         ok: false,
         message: "Энэ шалгалт олдсонгүй эсвэл устсан байна.",
         detail: "",
+        notFound: true,
       };
     }
     if (j.ok === true) return { ok: true };
@@ -830,6 +852,7 @@ async function bootstrap() {
       const cd = document.getElementById("closed-window-detail");
       if (cm) cm.textContent = win.message || "";
       if (cd) cd.textContent = win.detail || "";
+      applyClosedScreenHelp(true, win.notFound === true);
       showScreen("closed");
       return;
     }
@@ -844,6 +867,7 @@ async function bootstrap() {
       const cd = document.getElementById("closed-window-detail");
       if (cm) cm.textContent = win.message || "";
       if (cd) cd.textContent = win.detail || "";
+      applyClosedScreenHelp(false, false);
       showScreen("closed");
       return;
     }

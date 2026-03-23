@@ -22,14 +22,19 @@
       </p>
 
       <div id="screen-closed" class="card hidden">
-        <h2>Шалгалтын хугацаанаас гадуур</h2>
+        <h2 id="closed-heading">Шалгалтын хугацаанаас гадуур</h2>
         <p id="closed-message" class="closed-message"></p>
         <p id="closed-window-detail" class="upload-hint"></p>
-        <p class="upload-hint">
+        <p id="closed-help-static" class="upload-hint">
           <strong>Шалгалтын хугацааг</strong> багш <code>quizzes/manifest.json</code> дотор тохируулна:
           үндсэн шалгалтад <code>defaultWindow</code>, тусдаа шалгалтад тухайн мөрийн <code>window</code>.
           <code>openAt</code> / <code>closeAt</code> нь шалгалт <strong>нээлттэй байх завсрыг</strong> заана
           (жишээ: <code>2026-03-25T09:00:00+08:00</code>).
+        </p>
+        <p id="closed-help-dynamic" class="upload-hint hidden">
+          Энэ холбоос <a href="teacher-portal.html">багшийн хэсгээс</a> үүсгэсэн шалгалт (<code>?quiz=t_…</code>) —
+          <code>manifest.json</code> ашиглахгүй. Багш порталаас <strong>Эхлүүлэх</strong> / <strong>Дуусгах</strong>-аар цонх нээгдэнэ.
+          «Олдсонгүй» гэж гарвал: линк буруу, шалгалт устсан, эсвэл ноорог хараахан эхлээгүй байж болно — багшаас шинэ линк аваарай.
         </p>
       </div>
 
