@@ -1,5 +1,6 @@
 import { connectRedis, SUBMISSIONS_KEY } from "./lib/redis.js";
 import { authorizeTeacherRequest } from "./lib/teacherAuth.js";
+import { getSearchParam } from "./lib/requestQuery.js";
 
 export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -28,10 +29,7 @@ export default async function handler(req, res) {
       return res.end(JSON.stringify({ error: "Unauthorized" }));
     }
 
-    const quizId =
-      req.query && req.query.quizId != null
-        ? String(req.query.quizId).trim()
-        : "";
+    const quizId = getSearchParam(req, "quizId");
     if (!quizId) {
       res.statusCode = 400;
       return res.end(JSON.stringify({ error: "quizId required" }));

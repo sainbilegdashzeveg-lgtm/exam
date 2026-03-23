@@ -4,6 +4,7 @@ import {
   parseDynamicQuiz,
   canSubmitDynamicQuiz,
 } from "./lib/dynamicQuiz.js";
+import { getQuizIdFromReq } from "./lib/requestQuery.js";
 
 function formatTs(ts) {
   try {
@@ -36,11 +37,7 @@ export default async function handler(req, res) {
       return res.end(JSON.stringify({ error: "Method not allowed" }));
     }
 
-    const id =
-      (req.query && req.query.id != null && String(req.query.id)) ||
-      (req.query && req.query.quiz != null && String(req.query.quiz)) ||
-      "";
-    const qid = id.trim();
+    const qid = getQuizIdFromReq(req);
     if (!qid.startsWith("t_") || qid.length > 80) {
       res.statusCode = 400;
       return res.end(JSON.stringify({ error: "Invalid quiz id" }));
