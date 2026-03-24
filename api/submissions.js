@@ -42,7 +42,13 @@ export default async function handler(req, res) {
     const out = [];
     for (const line of raw) {
       try {
-        out.push(JSON.parse(line));
+        const row = JSON.parse(line);
+        if (!row || typeof row !== "object") continue;
+        const sn = Number(row.score);
+        const tn = Number(row.total);
+        if (Number.isFinite(sn)) row.score = sn;
+        if (Number.isFinite(tn)) row.total = tn;
+        out.push(row);
       } catch {
         /* skip */
       }

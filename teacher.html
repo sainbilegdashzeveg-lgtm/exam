@@ -88,6 +88,12 @@
         margin-bottom: 0;
         padding-bottom: 0;
       }
+      .teacher-table .teacher-score {
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
     </style>
   </head>
   <body>
@@ -166,6 +172,20 @@
         }
       }
 
+      function fmtScore(r) {
+        const s = r.score;
+        const t = r.total;
+        const sn = Number(s);
+        const tn = Number(t);
+        if (Number.isFinite(sn) && Number.isFinite(tn)) {
+          return `${sn} / ${tn}`;
+        }
+        if (s != null && t != null && s !== "" && t !== "") {
+          return `${String(s)} / ${String(t)}`;
+        }
+        return "—";
+      }
+
       function renderRows(rows) {
         const qf = els.filterQuiz.value.trim().toLowerCase();
         const filtered = qf
@@ -175,13 +195,14 @@
         els.tbody.innerHTML = "";
         for (const r of filtered) {
           const tr = document.createElement("tr");
+          const sid = r.id != null ? String(r.id) : "";
           tr.innerHTML = `
             <td>${esc(fmtTime(r.submittedAt))}</td>
             <td>${esc(r.studentName)}</td>
             <td>${esc(r.studentId || "—")}</td>
-            <td>${esc(r.score)} / ${esc(r.total)}</td>
+            <td class="teacher-score">${esc(fmtScore(r))}</td>
             <td><code>${esc(r.quizId)}</code></td>
-            <td><button type="button" class="linkish" data-id="${esc(r.id)}">Дэлгэрэнгүй</button></td>
+            <td><button type="button" class="linkish" data-id="${esc(sid)}">Дэлгэрэнгүй</button></td>
           `;
           els.tbody.appendChild(tr);
         }
@@ -192,11 +213,11 @@
       }
 
       function showDetail(id) {
-        const r = cache.find((x) => x.id === id);
+        const r = cache.find((x) => String(x.id) === String(id));
         if (!r) return;
         els.detail.classList.remove("hidden");
         const items = r.items || [];
-        let html = `<h3>${esc(r.studentName)} — оноо: ${esc(r.score)} / ${esc(r.total)} (1 зөв = 1 оноо)</h3>`;
+        let html = `<h3>${esc(r.studentName)} — оноо: ${esc(fmtScore(r))} (1 зөв = 1 оноо)</h3>`;
         if (!items.length) {
           html += "<p>Асуулт бүрийн дэлгэрэнгүй илгээгдээгүй.</p>";
         } else {
