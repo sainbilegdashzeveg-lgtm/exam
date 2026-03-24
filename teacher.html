@@ -94,7 +94,8 @@
     <main>
       <h1>Багшийн самбар</h1>
       <p class="sub">
-        Оюутнууд «Багшид илгээх» дарсан илгээлтүүд энд харагдана.
+        Оюутнууд «Багшид илгээх» дарсан илгээлтүүд энд харагдана. Оноо: <strong>1 зөв хариулт = 1 оноо</strong>
+        (<code>зөв / нийт асуулт</code>).
         <strong>Vercel</strong> дээр байршуулсан бол Upstash Redis + түлхүүр тохируулсан эсэхээ шалгана.
         Зөвхөн локалд турших бол: <code>cd server && npm start</code>.
       </p>
@@ -119,7 +120,7 @@
                 <th>Цаг</th>
                 <th>Оюутан</th>
                 <th>ID</th>
-                <th>Дүн</th>
+                <th>Оноо (зөв/нийт)</th>
                 <th>quizId</th>
                 <th></th>
               </tr>
@@ -195,7 +196,7 @@
         if (!r) return;
         els.detail.classList.remove("hidden");
         const items = r.items || [];
-        let html = `<h3>${esc(r.studentName)} — ${esc(r.score)}/${esc(r.total)}</h3>`;
+        let html = `<h3>${esc(r.studentName)} — оноо: ${esc(r.score)} / ${esc(r.total)} (1 зөв = 1 оноо)</h3>`;
         if (!items.length) {
           html += "<p>Асуулт бүрийн дэлгэрэнгүй илгээгдээгүй.</p>";
         } else {

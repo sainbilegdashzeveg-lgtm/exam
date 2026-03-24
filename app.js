@@ -483,6 +483,7 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
+/** Нэг зөв хариулт = 1 оноо (асуулт бүр ижил жинтэй). */
 function scoreQuiz() {
   let correct = 0;
   quiz.forEach((q, i) => {
@@ -497,8 +498,8 @@ function fillResultsUI() {
   els.scoreValue.textContent = `${correct} / ${total}`;
   els.scoreDetail.textContent =
     correct === total
-      ? "Бүх асуулт зөв."
-      : `${correct} зөв (нийт ${total}).`;
+      ? `Бүх асуулт зөв. Нийт оноо: ${correct} / ${total} (1 зөв = 1 оноо).`
+      : `Нийт оноо: ${correct} / ${total} — нэг зөв хариулт нэг оноо.`;
 
   const heading = document.getElementById("review-heading");
   const flowHint = document.getElementById("results-flow-hint");

@@ -39,6 +39,17 @@ export default async function handler(req, res) {
       return res.end(JSON.stringify({ error: "invalid payload" }));
     }
 
+    let score = Math.max(0, Math.min(10_000, Math.floor(Number(b.score))));
+    let total = Math.max(1, Math.min(10_000, Math.floor(Number(b.total))));
+    if (!Number.isFinite(score) || !Number.isFinite(total)) {
+      res.statusCode = 400;
+      return res.end(JSON.stringify({ error: "invalid score/total" }));
+    }
+    if (score > total) {
+      res.statusCode = 400;
+      return res.end(JSON.stringify({ error: "Оноо нийт асуултын тооноос их байж болохгүй." }));
+    }
+
     const row = {
       id:
         Date.now().toString(36) + Math.random().toString(36).slice(2, 10),
@@ -47,8 +58,8 @@ export default async function handler(req, res) {
       studentName: b.studentName.trim().slice(0, 120),
       studentId:
         (b.studentId && String(b.studentId).trim().slice(0, 64)) || "",
-      score: Math.max(0, Math.min(10_000, b.score | 0)),
-      total: Math.max(1, Math.min(10_000, b.total | 0)),
+      score,
+      total,
       items: Array.isArray(b.items) ? b.items : [],
     };
 
