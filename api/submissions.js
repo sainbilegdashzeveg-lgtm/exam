@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     }
     const redis = conn.redis;
 
-    const ok = await authorizeTeacherRequest(req, redis);
+    const ok = await authorizeTeacherRequest(req);
     if (!ok) {
       res.statusCode = 401;
       return res.end(JSON.stringify({ error: "Unauthorized" }));

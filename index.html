@@ -16,25 +16,20 @@
     <main>
       <h1>CSV Quiz</h1>
       <p class="sub">
-        Багш <code>quiz.csv</code> (үндсэн) эсвэл <code>?quiz=нэр</code> (<code>quizzes/нэр.csv</code>) ашиглана. Оюутанд ихэвчлэн CSV оруулах шаардлагагүй.
-        <strong>Багшийн хэсэг</strong> (нууц үг, CSV, линк): <a href="teacher-portal.html">teacher-portal.html</a> ·
-        <a href="manage-quizzes.html">Линкүүд (manifest)</a>
+        Багш репо дахь <code>quiz.csv</code>-аа солиод Git push → Vercel deploy хийгээд оюутанд шууд сайтын линк өгнө
+        (<code>index.html</code> эсвэл домэйн корень). Тусдаа шалгалт бол <code>quizzes/&lt;id&gt;.csv</code> +
+        <code>?quiz=id</code> — линкүүдийг <a href="manage-quizzes.html">manage-quizzes.html</a>-аас хуулна.
       </p>
 
       <div id="screen-closed" class="card hidden">
-        <h2 id="closed-heading">Шалгалтын хугацаанаас гадуур</h2>
+        <h2>Шалгалтын хугацаанаас гадуур</h2>
         <p id="closed-message" class="closed-message"></p>
         <p id="closed-window-detail" class="upload-hint"></p>
-        <p id="closed-help-static" class="upload-hint">
+        <p class="upload-hint">
           <strong>Шалгалтын хугацааг</strong> багш <code>quizzes/manifest.json</code> дотор тохируулна:
           үндсэн шалгалтад <code>defaultWindow</code>, тусдаа шалгалтад тухайн мөрийн <code>window</code>.
           <code>openAt</code> / <code>closeAt</code> нь шалгалт <strong>нээлттэй байх завсрыг</strong> заана
           (жишээ: <code>2026-03-25T09:00:00+08:00</code>).
-        </p>
-        <p id="closed-help-dynamic" class="upload-hint hidden">
-          Энэ холбоос <a href="teacher-portal.html">багшийн хэсгээс</a> үүсгэсэн шалгалт (<code>?quiz=t_…</code>) —
-          <code>manifest.json</code> ашиглахгүй. Багш порталаас <strong>Эхлүүлэх</strong> / <strong>Дуусгах</strong>-аар цонх нээгдэнэ.
-          «Олдсонгүй» гэж гарвал: линк буруу, шалгалт устсан, эсвэл ноорог хараахан эхлээгүй байж болно — багшаас шинэ линк аваарай.
         </p>
       </div>
 
@@ -133,8 +128,7 @@
       </div>
 
       <footer>
-        Papa Parse · <a href="teacher-portal.html">Багшийн хэсэг</a> ·
-        <a href="manage-quizzes.html">Линкүүд</a> ·
+        Papa Parse · <a href="manage-quizzes.html">Шалгалтын линкүүд</a> ·
         <a href="teacher.html">Илгээлт</a>
       </footer>
     </main>

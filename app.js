@@ -4,9 +4,6 @@ const PAGE_SIZE = 5;
 const KEYS = ["A", "B", "C", "D"];
 const STORAGE_PREFIX = "csv-quiz-v1";
 
-/** Багш эхлүүлэх/дуусгах бүрт шинэчлэгдэнэ — localStorage түлхүүрт орох (t_ шалгалт) */
-let dynSessionEpoch = "";
-
 function hashString(str) {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -35,10 +32,6 @@ function getQuizStorageSlot() {
 function getStorageKey() {
   const quizSlot = getQuizStorageSlot();
   let key = `${STORAGE_PREFIX}:q:${quizSlot}`;
-  if (quizSlot.startsWith("t_")) {
-    const e = dynSessionEpoch || "0";
-    key += `:e:${e}`;
-  }
   let raw = "";
   try {
     raw = new URLSearchParams(window.location.search).get("s") || "";
@@ -290,13 +283,6 @@ async function tryLoadBundledQuizCsv() {
     pid = "";
   }
   if (pid) {
-    if (pid.startsWith("t_")) {
-      const t = await fetchCsvText(
-        `/api/quiz-csv?id=${encodeURIComponent(pid)}`
-      );
-      if (!t) return false;
-      return parseCsvTextApply(t);
-    }
     const t = await fetchCsvText(`/quizzes/${pid}.csv`);
     if (!t) return false;
     return parseCsvTextApply(t);
@@ -424,27 +410,6 @@ function formatTs(ts) {
   }
 }
 
-function applyClosedScreenHelp(isDynamicQuiz, notFound) {
-  const heading = document.getElementById("closed-heading");
-  const helpStatic = document.getElementById("closed-help-static");
-  const helpDynamic = document.getElementById("closed-help-dynamic");
-  if (heading) {
-    heading.textContent =
-      isDynamicQuiz && notFound
-        ? "Шалгалт олдсонгүй"
-        : "Шалгалтын хугацаанаас гадуур";
-  }
-  if (helpStatic && helpDynamic) {
-    if (isDynamicQuiz) {
-      helpStatic.classList.add("hidden");
-      helpDynamic.classList.remove("hidden");
-    } else {
-      helpDynamic.classList.add("hidden");
-      helpStatic.classList.remove("hidden");
-    }
-  }
-}
-
 async function checkQuizWindow(quizSlot) {
   const manifest = await fetchQuizManifest();
   const w = resolveWindowConfig(manifest, quizSlot);
@@ -461,48 +426,6 @@ async function checkQuizWindow(quizSlot) {
     detail = `Шалгалтын хугацаа дууссан (${formatTs(ev.openT)} – ${formatTs(ev.closeT)}).`;
   }
   return { ok: false, message: custom, detail };
-}
-
-/** Багшийн порталаас үүсгэсэн шалгалт (Redis) — /api/quiz-status */
-async function checkDynamicQuizWindow(pid) {
-  try {
-    const res = await fetch(`/api/quiz-status?id=${encodeURIComponent(pid)}`, {
-      cache: "no-store",
-    });
-    const j = await res.json().catch(() => ({}));
-    dynSessionEpoch =
-      typeof j.sessionEpoch === "string" && j.sessionEpoch.length
-        ? j.sessionEpoch
-        : "0";
-    if (res.status === 503) {
-      return {
-        ok: false,
-        message: j.error || "Серверийн тохиргоо (Redis) шалгана уу.",
-        detail: "",
-      };
-    }
-    if (res.status === 404) {
-      return {
-        ok: false,
-        message: "Энэ шалгалт олдсонгүй эсвэл устсан байна.",
-        detail: "",
-        notFound: true,
-      };
-    }
-    if (j.ok === true) return { ok: true };
-    return {
-      ok: false,
-      message: j.message || "Шалгалтын цонх хаалттай.",
-      detail: j.detail || "",
-    };
-  } catch {
-    dynSessionEpoch = "0";
-    return {
-      ok: false,
-      message: "Сүлжээний алдаа — шалгалтын төлөв ачаалагдсангүй.",
-      detail: "",
-    };
-  }
 }
 
 function renderPage() {
@@ -829,57 +752,30 @@ updateSessionUrlHint();
 const bootLoadingEl = document.getElementById("bootstrap-loading");
 
 async function bootstrap() {
+  if (initFromStorage()) return;
+  if (bootLoadingEl) bootLoadingEl.classList.remove("hidden");
   let pid = "";
   try {
     pid = sanitizeQuizId(new URLSearchParams(window.location.search).get("quiz"));
   } catch {
     pid = "";
   }
-  dynSessionEpoch = "";
-
-  const isDynamic = Boolean(pid && pid.startsWith("t_"));
-
-  if (isDynamic) {
-    if (bootLoadingEl) bootLoadingEl.classList.remove("hidden");
-    const win = await checkDynamicQuizWindow(pid);
-    if (initFromStorage()) {
-      if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
-      return;
-    }
-    if (!win.ok) {
-      if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
-      const cm = document.getElementById("closed-message");
-      const cd = document.getElementById("closed-window-detail");
-      if (cm) cm.textContent = win.message || "";
-      if (cd) cd.textContent = win.detail || "";
-      applyClosedScreenHelp(true, win.notFound === true);
-      showScreen("closed");
-      return;
-    }
-  } else {
-    if (initFromStorage()) return;
-    if (bootLoadingEl) bootLoadingEl.classList.remove("hidden");
-    const slot = pid || "default";
-    const win = await checkQuizWindow(slot);
-    if (!win.ok) {
-      if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
-      const cm = document.getElementById("closed-message");
-      const cd = document.getElementById("closed-window-detail");
-      if (cm) cm.textContent = win.message || "";
-      if (cd) cd.textContent = win.detail || "";
-      applyClosedScreenHelp(false, false);
-      showScreen("closed");
-      return;
-    }
+  const slot = pid || "default";
+  const win = await checkQuizWindow(slot);
+  if (!win.ok) {
+    if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
+    const cm = document.getElementById("closed-message");
+    const cd = document.getElementById("closed-window-detail");
+    if (cm) cm.textContent = win.message || "";
+    if (cd) cd.textContent = win.detail || "";
+    showScreen("closed");
+    return;
   }
-
   const ok = await tryLoadBundledQuizCsv();
   if (bootLoadingEl) bootLoadingEl.classList.add("hidden");
   if (!ok) {
     if (pid) {
-      els.uploadError.textContent = pid.startsWith("t_")
-        ? `«${pid}» динамик шалгалт ачаалагдсангүй (цонх хаалттай эсвэл серверийн тохиргоо). Багшийн портал шалгана уу.`
-        : `«${pid}» шалгалт олдсонгүй. Файл quizzes/${pid}.csv байгаа эсэхийг шалгана уу.`;
+      els.uploadError.textContent = `«${pid}» шалгалт олдсонгүй. Файл quizzes/${pid}.csv байгаа эсэхийг шалгана уу.`;
     }
     showScreen("upload");
   }
