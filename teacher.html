@@ -102,8 +102,8 @@
       <p class="sub">
         Оюутнууд «Багшид илгээх» дарсан илгээлтүүд энд харагдана. Оноо: <strong>1 зөв хариулт = 1 оноо</strong>
         (<code>зөв / нийт асуулт</code>).
-        <strong>Vercel</strong> дээр байршуулсан бол Upstash Redis + түлхүүр тохируулсан эсэхээ шалгана.
-        Зөвхөн локалд турших бол: <code>cd server && npm start</code>.
+        <strong>Vercel</strong> дээр илгээлт Redis-д, <strong>локал</strong> (<code>server</code>) дээр файлд хадгалагдана — <strong>хоёр нь нэг биш</strong>; оюутан аль хаягаар орсон тэр хаягийн багшийн хуудсыг нээнэ.
+        <strong>Vercel</strong>: Upstash + <code>TEACHER_KEY</code>. Локал: <code>cd server && npm start</code>.
       </p>
 
       <div class="card">
@@ -115,6 +115,7 @@
           <button type="button" class="btn btn-primary" id="btn-load">Ачаалах</button>
         </div>
         <p id="teacher-error" class="error" role="alert"></p>
+        <p id="teacher-info" class="upload-hint" role="status" style="margin-top: 0.35rem"></p>
         <label style="display: block; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--muted)">
           Шүүх: шалгалтын ID (quizId)
           <input type="text" id="filter-quiz" placeholder="Бүгдийг харуулах — хоосон үлдээнэ" style="margin-top: 0.35rem; width: 100%; max-width: 360px; display: block; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border); background: rgba(0,0,0,0.25); color: var(--text); font-family: inherit;" />
@@ -150,6 +151,7 @@
         key: document.getElementById("teacher-key"),
         btnLoad: document.getElementById("btn-load"),
         err: document.getElementById("teacher-error"),
+        info: document.getElementById("teacher-info"),
         tbody: document.getElementById("tbody"),
         filterQuiz: document.getElementById("filter-quiz"),
         detail: document.getElementById("detail"),
@@ -210,6 +212,18 @@
         els.tbody.querySelectorAll("button[data-id]").forEach((btn) => {
           btn.addEventListener("click", () => showDetail(btn.getAttribute("data-id")));
         });
+
+        if (els.info) {
+          if (!rows.length) {
+            els.info.textContent =
+              "Илгээлт алга эсвэл буруу газар харж байна. Шалгах: (1) Оюутан таны нээж буй ижил домэйн дээр «Багшид илгээх» дараад «Амжилттай илгээгдлээ» гэж гарсан уу. (2) Vercel бол Environment Variables: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, TEACHER_KEY. (3) Локал бол зөвхөн server ажиллаж байх үед л харагдана — production-той холихгүй.";
+          } else if (!filtered.length && qf) {
+            els.info.textContent =
+              "Шүүлтэнд тохирсон мөр алга. Дээрх quizId талбарыг хоосолж дахин «Ачаалах» эсвэл шүүлтийг цэвэрлэнэ үү.";
+          } else {
+            els.info.textContent = "";
+          }
+        }
       }
 
       function showDetail(id) {
@@ -241,6 +255,7 @@
 
       async function load() {
         els.err.textContent = "";
+        if (els.info) els.info.textContent = "";
         const key = els.key.value.trim();
         if (!key) {
           els.err.textContent = "Түлхүүр оруулна уу.";
@@ -254,6 +269,7 @@
             return;
           }
           cache = await res.json();
+          if (!Array.isArray(cache)) cache = [];
           renderRows(cache);
           els.detail.classList.add("hidden");
         } catch (e) {
