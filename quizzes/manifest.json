@@ -12,8 +12,8 @@
       }
     },
     {
-      "id": "service",
-      "title": "Service Design Test (48 асуулт)",
+      "id": "service_design_full_48",
+      "title": "Service Design (48 асуулт)",
       "description": "Файл: quizzes/service_design_full_48.csv",
       "window": {
         "enabled": false
