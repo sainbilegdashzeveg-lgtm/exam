@@ -2,22 +2,5 @@
   "defaultWindow": {
     "enabled": false
   },
-  "quizzes": [
-    {
-      "id": "demo",
-      "title": "Жишээ шалгалт",
-      "description": "Файл: quizzes/demo.csv",
-      "window": {
-        "enabled": false
-      }
-    },
-    {
-      "id": "service_design_full_48",
-      "title": "Service Design (48 асуулт)",
-      "description": "Файл: quizzes/service_design_full_48.csv",
-      "window": {
-        "enabled": false
-      }
-    }
-  ]
+  "quizzes": []
 }

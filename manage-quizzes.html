@@ -55,10 +55,9 @@
   </head>
   <body>
     <main>
-      <h1>Олон шалгалт — линк хуулах</h1>
+      <h1>Шалгалтын линк</h1>
       <p class="sub">
-        Шалгалт бүр <code>quizzes/&lt;id&gt;.csv</code> файл + <code>quizzes/manifest.json</code> дахь жагсаалтаар бүртгэгдэнэ. Хадгалалт =
-        Git репо (push → Vercel deploy).
+        Одоо нэг л шалгалт: <code>quiz.csv</code> автоматаар ачаалагдана. Доорх нь үндсэн оюутны хаяг (хуулах).
       </p>
 
       <div class="card">
@@ -78,20 +77,13 @@
         </table>
 
         <div class="mq-note">
-          <strong>Шинэ шалгалт нэмэх:</strong>
-          <ol style="margin: 0.5rem 0 0 1.1rem; padding: 0">
-            <li><code>quizzes/myquiz.csv</code> файл үүсгэ (баганууд нь өмнөхтэй адил).</li>
-            <li><code>quizzes/manifest.json</code> дотор <code>id</code> (латин, тоо, _, -) + <code>title</code> нэм.</li>
-            <li>Git push хий — Vercel дахин deploy.</li>
-          </ol>
-          <p style="margin: 0.75rem 0 0">
-            <strong>Үндсэн шалгалт</strong> (<code>quiz.csv</code>): линк дээр <code>?quiz=</code> байхгүй бол энэ ачаалагдана.
+          <p style="margin: 0">
+            <strong>Шалгалт солих:</strong> <code>quiz.csv</code>-ийг засаад push хийнэ. Олон шалгалт дахин хэрэгтэй бол
+            <code>quizzes/&lt;id&gt;.csv</code> + <code>manifest.json</code> дотор <code>quizzes</code> массивт бүртгэл нэмнэ.
           </p>
           <p style="margin: 0.75rem 0 0">
-            <strong>Шалгалтын хугацаа:</strong> <code>manifest.json</code> дотор <code>defaultWindow</code> (үндсэн) эсвэл шалгалт бүрийн
-            <code>window</code> — <code>enabled: true</code>, дараа нь шалгалт <strong>нээлттэй байх завсар</strong>:
-            <code>openAt</code>, <code>closeAt</code> (огноо+цаг, жишээ нь <code>+08:00</code> бүсээр),
-            <code>message</code> оюутанд гаргах товч тайлбар (сонголттой).
+            <strong>Хугацаа:</strong> <code>quizzes/manifest.json</code> дахь <code>defaultWindow</code> — <code>enabled: true</code>,
+            <code>openAt</code>, <code>closeAt</code> (ISO огноо, жишээ <code>2026-03-25T09:00:00+08:00</code>).
           </p>
         </div>
       </div>

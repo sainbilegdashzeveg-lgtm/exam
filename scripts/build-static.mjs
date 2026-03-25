@@ -12,7 +12,6 @@ const files = [
   "styles.css",
   "teacher.html",
   "manage-quizzes.html",
-  "sample-quiz.csv",
   "quiz.csv",
 ];
 
